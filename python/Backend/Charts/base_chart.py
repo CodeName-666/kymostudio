@@ -10,6 +10,7 @@ class ChartType(Enum):
     """Enumeration of available chart types."""
     XY_LINE = "xy_line"           # 2D Line Chart (standard)
     XY_SCATTER = "xy_scatter"     # 2D Scatter Plot
+    TIME_SERIES = "time_series"   # Time Series Chart (Y values over time)
     XYZ_SURFACE = "xyz_surface"   # 3D Surface Plot
     XYZ_SCATTER = "xyz_scatter"   # 3D Scatter Plot
     BAR = "bar"                   # Bar Chart

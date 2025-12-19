@@ -3,6 +3,7 @@
 from typing import Optional
 from .base_chart import BaseChart, ChartType
 from .xy_chart import XYLineChart, XYScatterChart
+from .time_series_chart import TimeSeriesChart
 
 
 class ChartFactory:
@@ -40,6 +41,7 @@ class ChartFactory:
         chart_map = {
             ChartType.XY_LINE: XYLineChart,
             ChartType.XY_SCATTER: XYScatterChart,
+            ChartType.TIME_SERIES: TimeSeriesChart,
             # Future chart types:
             # ChartType.XYZ_SURFACE: XYZSurfaceChart,
             # ChartType.XYZ_SCATTER: XYZScatterChart,
@@ -64,6 +66,7 @@ class ChartFactory:
         return [
             ChartType.XY_LINE,
             ChartType.XY_SCATTER,
+            ChartType.TIME_SERIES,
             # Add more as they are implemented
         ]
 
