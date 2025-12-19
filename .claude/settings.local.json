@@ -18,7 +18,9 @@
       "Bash(git commit:*)",
       "Bash(ls:*)",
       "Bash(python main.py:*)",
-      "Bash(python -m PlotterApp:*)"
+      "Bash(python -m PlotterApp:*)",
+      "Bash(python -m pip:*)",
+      "Bash(timeout 10 python:*)"
     ],
     "deny": [],
     "ask": []

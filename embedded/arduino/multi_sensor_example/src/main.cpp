@@ -3,10 +3,11 @@
  * @brief Arduino multi-channel example using Plotter class
  *
  * Demonstrates sending multiple sensor channels to PlotterApp.
+ * Shows 1D, 2D, and 3D data transmission in one example.
  * PlatformIO project - compile with: pio run -e uno
  *
- * @version 4.0
- * @date 2025-12-11
+ * @version 5.0
+ * @date 2025-12-19
  */
 
 #include <Arduino.h>
@@ -23,13 +24,14 @@ void setup() {
         ; // Wait for serial port
     }
 
-    // Set start time for timestamps
+    // Set start time and callback for timestamps
     plotter.setStartTime(millis());
+    plotter.setMillisecondCallback(millis);
 
-    Serial.println("# Arduino Multi-Sensor Example");
-    Serial.println("# Channel 0: Temperature");
-    Serial.println("# Channel 1: Humidity");
-    Serial.println("# Channel 2: Pressure");
+    Serial.println("# Arduino Multi-Sensor Example v5.0");
+    Serial.println("# Channel 0: Temperature (1D with timestamp)");
+    Serial.println("# Channel 1: Position vs Force (2D with timestamp)");
+    Serial.println("# Channel 2: 3D Accelerometer (3D without timestamp)");
 }
 
 void loop() {
@@ -38,14 +40,19 @@ void loop() {
     if (currentTime - lastSample >= SAMPLE_RATE_MS) {
         lastSample = currentTime;
 
-        // Simulate sensor readings
+        // 1D: Simple temperature reading with timestamp
         float temperature = 20.0 + sin(currentTime / 1000.0) * 5.0;
-        float humidity = 50.0 + cos(currentTime / 800.0) * 10.0;
-        float pressure = 1013.25 + sin(currentTime / 1200.0) * 20.0;
+        plotter.send(0, temperature, true);
 
-        // Send all three channels
-        plotter.send(0, temperature, currentTime);
-        plotter.send(1, humidity, currentTime);
-        plotter.send(2, pressure, currentTime);
+        // 2D: Position vs Force with timestamp
+        float position = sin(currentTime / 800.0) * 100.0;
+        float force = cos(currentTime / 800.0) * 50.0;
+        plotter.send2D(1, position, force, true);
+
+        // 3D: Accelerometer data (X, Y, Z) without timestamp
+        float accelX = sin(currentTime / 500.0);
+        float accelY = cos(currentTime / 600.0);
+        float accelZ = sin(currentTime / 700.0) * 0.5;
+        plotter.send3D(2, accelX, accelY, accelZ, false);
     }
 }

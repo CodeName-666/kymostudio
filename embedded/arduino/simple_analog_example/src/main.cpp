@@ -5,8 +5,8 @@
  * Reads analog sensor and sends data to PlotterApp.
  * PlatformIO project - compile with: pio run -e uno
  *
- * @version 4.0
- * @date 2025-12-11
+ * @version 5.0
+ * @date 2025-12-19
  */
 
 #include <Arduino.h>
@@ -24,11 +24,13 @@ void setup() {
         ; // Wait for serial port
     }
 
-    // Set start time for timestamps
+    // Set start time and callback for timestamps
     plotter.setStartTime(millis());
+    plotter.setMillisecondCallback(millis);
 
-    Serial.println("# Arduino Simple Analog Example");
+    Serial.println("# Arduino Simple Analog Example v5.0");
     Serial.println("# Reading from pin A0");
+    Serial.println("# Sending 1D data (Y-value) with timestamp");
 }
 
 void loop() {
@@ -41,7 +43,7 @@ void loop() {
         int rawValue = analogRead(ANALOG_PIN);
         float voltage = (rawValue / 1023.0) * 5.0;
 
-        // Send data point (channel 0)
-        plotter.send(0, voltage, currentTime);
+        // Send 1D data point (channel 0) with timestamp
+        plotter.send(0, voltage, true);
     }
 }

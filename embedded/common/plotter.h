@@ -5,8 +5,8 @@
  * Modern C++ interface using abstract base class for maximum flexibility.
  * Works with Arduino Print objects, custom streams, and STM32.
  *
- * @version 4.0
- * @date 2025-12-11
+ * @version 5.0
+ * @date 2025-12-19
  */
 
 #ifndef PLOTTER_H
@@ -15,6 +15,20 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "plotter_stream.h"
+
+/**
+ * @brief Function pointer type for getting current time in milliseconds
+ *
+ * This callback is used when timestamps are enabled.
+ * Platform-specific implementations:
+ * - Arduino/ESP32: millis()
+ * - STM32 HAL: HAL_GetTick()
+ * - FreeRTOS: xTaskGetTickCount()
+ * - Custom: your platform's millisecond counter
+ *
+ * @return Current time in milliseconds since system start
+ */
+typedef uint32_t (*GetMillisecondCallback)();
 
 /**
  * @brief Plotter class for streaming sensor data to PlotterApp
@@ -56,14 +70,15 @@
  */
 class Plotter {
 private:
-    PlotterStream* stream;     ///< Output stream
-    uint32_t startTimeMs;      ///< Start time in milliseconds
-    bool useTimestamp;         ///< Whether to include timestamps
-    char buffer[80];           ///< Internal buffer for formatting (increased for 3D support)
-    bool ownsStream;           ///< Whether we own the stream object
+    PlotterStream* stream;              ///< Output stream
+    uint32_t startTimeMs;               ///< Start time in milliseconds
+    bool useTimestamp;                  ///< Whether to include timestamps
+    char buffer[96];                    ///< Internal buffer for formatting (increased for 3D XYZ support)
+    bool ownsStream;                    ///< Whether we own the stream object
+    GetMillisecondCallback getMillisecond; ///< Callback for getting current time in milliseconds
 
 #ifdef ARDUINO
-    PrintStream* printStream;  ///< Owned PrintStream wrapper
+    PrintStream* printStream;           ///< Owned PrintStream wrapper
 #endif
 
 public:
@@ -147,98 +162,122 @@ public:
     void setStartTime(uint32_t startTime);
 
     /**
-     * @brief Send data point with automatic timestamp
+     * @brief Set the callback function for getting current time
      *
-     * Calculates timestamp automatically from current time and start time.
-     * Timestamp is converted to seconds (floating point).
+     * This callback is used when timestamps are enabled and you use
+     * methods with boolean timestamp parameter.
      *
-     * @param channelId Channel ID (0-255)
-     * @param value Sensor value
-     * @param currentTimeMs Current time in milliseconds
+     * @param callback Function pointer to millisecond counter
      *
      * @code
-     * plotter.send(0, temperature, millis());
-     * plotter.send(1, humidity, millis());
+     * plotter.setMillisecondCallback(millis);      // Arduino
+     * plotter.setMillisecondCallback(HAL_GetTick); // STM32
      * @endcode
      */
-    void send(uint8_t channelId, float value, uint32_t currentTimeMs);
+    void setMillisecondCallback(GetMillisecondCallback callback);
+
+    // ============================================================
+    // 1D Methods: Send only Y-values
+    // ============================================================
 
     /**
-     * @brief Send data point with explicit timestamp
-     *
-     * Use this for custom timestamp values in seconds.
+     * @brief Send 1D data point (Y-value only)
      *
      * @param channelId Channel ID (0-255)
-     * @param value Sensor value
-     * @param timestamp Explicit timestamp in seconds
+     * @param yValue Y-axis value (measurement)
+     * @param includeTimestamp If true and callback is set, timestamp is included
+     *
+     * Output with timestamp: {"id":0,"value":y,"timestamp":t}
+     * Output without: {"id":0,"value":y}
      *
      * @code
-     * plotter.send(0, temperature, 1.234);
+     * plotter.send(0, temperature, true);  // with timestamp
+     * plotter.send(0, temperature, false); // without timestamp
      * @endcode
      */
-    void send(uint8_t channelId, float value, float timestamp);
+    void send(uint8_t channelId, float yValue, bool includeTimestamp);
 
     /**
-     * @brief Send data point without timestamp
-     *
-     * PlotterApp will auto-generate timestamps based on arrival time.
+     * @brief Send 1D data point without timestamp (backward compatible)
      *
      * @param channelId Channel ID (0-255)
-     * @param value Sensor value
+     * @param yValue Y-axis value
      *
      * @code
      * plotter.send(0, temperature);
      * @endcode
      */
-    void send(uint8_t channelId, float value);
+    void send(uint8_t channelId, float yValue);
+
+    // ============================================================
+    // 2D Methods: Send X and Y values
+    // ============================================================
 
     /**
-     * @brief Send 3D data point with automatic timestamp
-     *
-     * For 3D charts (XYZ surface/scatter plots).
-     * Calculates timestamp automatically from current time and start time.
+     * @brief Send 2D data point (X and Y values)
      *
      * @param channelId Channel ID (0-255)
-     * @param yValue Y-axis value (measurement value)
-     * @param zValue Z-axis value (depth/height)
-     * @param currentTimeMs Current time in milliseconds
+     * @param xValue X-axis value
+     * @param yValue Y-axis value
+     * @param includeTimestamp If true and callback is set, timestamp is included
+     *
+     * Output with timestamp: {"id":0,"x":x,"value":y,"timestamp":t}
+     * Output without: {"id":0,"x":x,"value":y}
      *
      * @code
-     * plotter.send3D(0, temperature, pressure, millis());
+     * plotter.send2D(0, position, temperature, true);
      * @endcode
      */
-    void send3D(uint8_t channelId, float yValue, float zValue, uint32_t currentTimeMs);
+    void send2D(uint8_t channelId, float xValue, float yValue, bool includeTimestamp);
 
     /**
-     * @brief Send 3D data point with explicit timestamp
-     *
-     * For 3D charts with custom timestamp values in seconds.
+     * @brief Send 2D data point without timestamp
      *
      * @param channelId Channel ID (0-255)
-     * @param yValue Y-axis value (measurement value)
-     * @param zValue Z-axis value (depth/height)
-     * @param timestamp Explicit timestamp in seconds
+     * @param xValue X-axis value
+     * @param yValue Y-axis value
      *
      * @code
-     * plotter.send3D(0, temperature, pressure, 1.234);
+     * plotter.send2D(0, position, temperature);
      * @endcode
      */
-    void send3D(uint8_t channelId, float yValue, float zValue, float timestamp);
+    void send2D(uint8_t channelId, float xValue, float yValue);
+
+    // ============================================================
+    // 3D Methods: Send X, Y and Z values
+    // ============================================================
+
+    /**
+     * @brief Send 3D data point (X, Y, and Z values)
+     *
+     * @param channelId Channel ID (0-255)
+     * @param xValue X-axis value
+     * @param yValue Y-axis value
+     * @param zValue Z-axis value
+     * @param includeTimestamp If true and callback is set, timestamp is included
+     *
+     * Output with timestamp: {"id":0,"x":x,"value":y,"z":z,"timestamp":t}
+     * Output without: {"id":0,"x":x,"value":y,"z":z}
+     *
+     * @code
+     * plotter.send3D(0, xPos, yPos, zPos, true);
+     * @endcode
+     */
+    void send3D(uint8_t channelId, float xValue, float yValue, float zValue, bool includeTimestamp);
 
     /**
      * @brief Send 3D data point without timestamp
      *
-     * For 3D charts. PlotterApp will auto-generate timestamps.
-     *
      * @param channelId Channel ID (0-255)
-     * @param yValue Y-axis value (measurement value)
-     * @param zValue Z-axis value (depth/height)
+     * @param xValue X-axis value
+     * @param yValue Y-axis value
+     * @param zValue Z-axis value
      *
      * @code
-     * plotter.send3D(0, temperature, pressure);
+     * plotter.send3D(0, xPos, yPos, zPos);
      * @endcode
      */
-    void send3D(uint8_t channelId, float yValue, float zValue);
+    void send3D(uint8_t channelId, float xValue, float yValue, float zValue);
 
     /**
      * @brief Enable or disable timestamps
