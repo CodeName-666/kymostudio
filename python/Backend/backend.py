@@ -109,12 +109,17 @@ class Backend(QObject):
         self.__scroll_step = 5
 
         # Performance optimization: Batch updates
-        self._point_buffer: Dict[str, List[Tuple[float, float]]] = {}
+        self._point_buffer: Dict[str, List[Tuple[float, float, float]]] = {}
+        self._point_buffer_3d: Dict[str, List[Tuple[float, float, float]]] = {}
         self._batch_timer = QTimer(self)
         self._batch_timer.timeout.connect(self._flush_point_buffer)
         self._batch_timer.start(50)  # Flush every 50ms (20 Hz batch rate)
         self._batch_size = 10  # Max points per batch before immediate flush
         self._batch_enabled = True  # Enable batching by default
+
+        # Message registry (UI table) - throttle updates to the same batch timer
+        self._message_state: Dict[str, Dict[str, Any]] = {}
+        self._dirty_messages: set[str] = set()
 
         # Performance optimization: Downsampling
         self._downsample_enabled = False  # Disabled by default
@@ -499,6 +504,7 @@ class Backend(QObject):
                 "color": color,
                 "auto_index": 0,
                 "first_timestamp": None,
+                "first_rx_time": None,
                 "announced": False
             }
             self._graph_state[unique_id] = state
@@ -511,19 +517,63 @@ class Backend(QObject):
             self._queue_event("newGraph", unique_id, state["display_name"], state["color"], interface_type)
             state["announced"] = True
 
-        # Calculate X-axis value:
+        # ------------------------------------------------------------------
+        # Message registry (for UI inspection)
+        # ------------------------------------------------------------------
+        now = time.time()
+        conn_info = self.__connections.get(interface)
+        interface_type = conn_info.interface_type if conn_info else interface
+
+        prev = self._message_state.get(unique_id)
+        prev_rx = prev.get("rxTime") if prev else None
+        cycle_time = (now - float(prev_rx)) if prev_rx is not None else None
+        rx_count = (int(prev.get("rxCount", 0)) + 1) if prev else 1
+
+        # Pre-calculate time normalization even if X is present (needed for time-series views)
+        t_value = None
+        if data_point.timestamp is not None:
+            if state["first_timestamp"] is None:
+                state["first_timestamp"] = data_point.timestamp
+            t_value = float(data_point.timestamp - state["first_timestamp"])
+        else:
+            if state["first_rx_time"] is None:
+                state["first_rx_time"] = now
+            t_value = float(now - state["first_rx_time"])
+
+        self._message_state[unique_id] = {
+            "uniqueId": unique_id,
+            "displayName": state["display_name"],
+            "interface": interface,
+            "interfaceType": interface_type,
+            "dataId": int(data_point.id),
+            "x": float(data_point.x) if getattr(data_point, "x", None) is not None else None,
+            "y": float(data_point.value),
+            "z": float(data_point.z_value) if getattr(data_point, "z_value", None) is not None else None,
+            "timestamp": float(data_point.timestamp) if data_point.timestamp is not None else None,
+            "t": t_value,
+            "rxTime": float(now),
+            "cycleTime": float(cycle_time) if cycle_time is not None else None,
+            "rxCount": rx_count,
+        }
+        self._dirty_messages.add(unique_id)
+
+        # ------------------------------------------------------------------
+        # Chart routing (2D + optional 3D)
+        # ------------------------------------------------------------------
+        # XY X-axis value:
         # - If an explicit X value is provided (XY mode), use it as-is.
-        # - Else if a timestamp is provided (time mode), normalize it so each line starts at t=0.
+        # - Else if a timestamp is provided (time mode), use normalized time.
         # - Else fall back to auto-increment.
         if getattr(data_point, "x", None) is not None:
             x_value = float(data_point.x)  # type: ignore[arg-type]
-        elif data_point.timestamp is not None:
-            if state["first_timestamp"] is None:
-                state["first_timestamp"] = data_point.timestamp
-            x_value = data_point.timestamp - state["first_timestamp"]
+        elif t_value is not None:
+            x_value = float(t_value)
         else:
-            x_value = state["auto_index"]
+            x_value = float(state["auto_index"])
             state["auto_index"] += 1
+
+        # Time-series coordinate: prefer normalized timestamp even if X is present.
+        time_value = float(t_value)
 
         # Apply downsampling if enabled
         if self._downsample_enabled and not self._should_emit_point(unique_id):
@@ -531,11 +581,29 @@ class Backend(QObject):
 
         # Send point to QML - use batching for better performance
         if self._batch_enabled:
-            self._buffer_point(unique_id, x_value, data_point.value)
+            self._buffer_point(unique_id, x_value, float(data_point.value), time_value)
         else:
             # Legacy: direct send (slower)
-            point = {"x": x_value, "y": data_point.value}
+            point = {
+                "x": x_value,
+                "y": float(data_point.value),
+                "t": time_value,
+                "timestamp": float(data_point.timestamp) if data_point.timestamp is not None else None,
+                "z": float(data_point.z_value) if getattr(data_point, "z_value", None) is not None else None,
+            }
             self._queue_event("append_graph_point", unique_id, point)
+
+        # 3D charts (XYZ): emit dedicated events when Z is present
+        if getattr(data_point, "z_value", None) is not None:
+            z_value = float(data_point.z_value)  # type: ignore[arg-type]
+            if self._batch_enabled:
+                self._buffer_point_3d(unique_id, x_value, float(data_point.value), z_value)
+            else:
+                self._queue_event(
+                    "append_graph_point_3d",
+                    unique_id,
+                    {"x": x_value, "y": float(data_point.value), "z": z_value},
+                )
 
     @Slot(result="QVariant")
     def get_test_signal_templates(self) -> List[Dict[str, Any]]:
@@ -741,7 +809,7 @@ class Backend(QObject):
     # ------------------------------------------------------------------ #
     # Batch update methods for performance optimization
     # ------------------------------------------------------------------ #
-    def _buffer_point(self, unique_id: str, x: float, y: float) -> None:
+    def _buffer_point(self, unique_id: str, x: float, y: float, t: float) -> None:
         """Buffer a point for batch sending to QML.
 
         Points are collected and sent in batches to reduce QML/JavaScript overhead.
@@ -751,16 +819,31 @@ class Backend(QObject):
         if unique_id not in self._point_buffer:
             self._point_buffer[unique_id] = []
 
-        self._point_buffer[unique_id].append((x, y))
+        # Store as [x, y, t] so different chart types can pick the right coordinate.
+        self._point_buffer[unique_id].append((x, y, t))
 
         # Flush immediately if buffer is full
         if len(self._point_buffer[unique_id]) >= self._batch_size:
             self._flush_points_for_line(unique_id)
 
+    def _buffer_point_3d(self, unique_id: str, x: float, y: float, z: float) -> None:
+        """Buffer a 3D point for batch sending to QML."""
+        if unique_id not in self._point_buffer_3d:
+            self._point_buffer_3d[unique_id] = []
+
+        self._point_buffer_3d[unique_id].append((x, y, z))
+
+        if len(self._point_buffer_3d[unique_id]) >= self._batch_size:
+            self._flush_points_for_line_3d(unique_id)
+
     def _flush_point_buffer(self) -> None:
-        """Timer callback to flush all buffered points."""
+        """Timer callback to flush all buffered points + message state."""
         for unique_id in list(self._point_buffer.keys()):
             self._flush_points_for_line(unique_id)
+        for unique_id in list(self._point_buffer_3d.keys()):
+            self._flush_points_for_line_3d(unique_id)
+
+        self._flush_message_updates()
 
     def _flush_points_for_line(self, unique_id: str) -> None:
         """Flush buffered points for a single line to QML."""
@@ -776,6 +859,30 @@ class Backend(QObject):
 
         # Clear buffer
         self._point_buffer[unique_id] = []
+
+    def _flush_points_for_line_3d(self, unique_id: str) -> None:
+        if unique_id not in self._point_buffer_3d:
+            return
+
+        points = self._point_buffer_3d[unique_id]
+        if not points:
+            return
+
+        self._queue_event("append_graph_points_batch_3d", unique_id, points)
+        self._point_buffer_3d[unique_id] = []
+
+    def _flush_message_updates(self) -> None:
+        if not self._dirty_messages:
+            return
+
+        # Emit latest state per message (throttled to batch timer)
+        for unique_id in list(self._dirty_messages):
+            msg = self._message_state.get(unique_id)
+            if not msg:
+                continue
+            self._queue_event("message_received", msg)
+
+        self._dirty_messages.clear()
 
     @Slot(bool)
     def set_batch_enabled(self, enabled: bool) -> None:
@@ -895,6 +1002,11 @@ class Backend(QObject):
             logger.log_info("New Comports found {}".format(new_com_list))
             self.com_port_update.emit(new_com_list)
             self.__com_list = new_com_list
+
+    @Slot(result="QVariant")
+    def get_com_ports(self) -> List[str]:
+        """Return the current list of serial ports for UI selection."""
+        return _get_serial_ports()
 
     @Slot(str, result="QVariant")
     def get_interface_config(self, interface: str) -> Dict[str, Any]:
