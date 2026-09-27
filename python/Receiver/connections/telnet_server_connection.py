@@ -1,40 +1,28 @@
+"""Backward-compatible adapter for the modern Telnet server receiver."""
+
+from __future__ import annotations
+
+from typing import Any, Dict, Optional
+
+from ..telnet_receiver import TelnetServerReceiver
 
 
-from typing import Dict
-from receiver_thread import ReceiverThread
-from telnetlib import Telnet
-from .config.telnet_config import TelnetConfig
+class TelnetServerConnection(TelnetServerReceiver):
+    def __init__(self, config: Optional[Dict[str, Any]] = None) -> None:
+        super().__init__(config or {"host": "0.0.0.0", "port": 8023})
+
+    def connect(self) -> bool:
+        self.start()
+        return self.is_connected()
+
+    def disconnect(self) -> None:
+        self.stop()
+
+    def connected(self) -> bool:
+        return self.is_connected()
+
+    def config(self, config: Dict[str, Any]) -> None:
+        super().config(config)
 
 
-
-class TelnetServerConnection(ReceiverThread):
-
-    def __init__(self) -> None:
-        ReceiverThread.__init__(self)
-        self.telnet = Telnet()
-
-    def run(self):
-        pass
-
-    def send_response(self, response):
-        pass
-
-    def stop_event(self):
-        pass
-
-    def connect(self):
-        pass
-    
-    def disconnect(self):
-        pass
-    
-    def connected(self):
-        pass
-
-    def config(self, config: Dict):
-        pass
-
-    
-server = telnetlib.Telnet()
-server.bind((HOST, PORT))
-server.listen(1)
+__all__ = ["TelnetServerConnection"]

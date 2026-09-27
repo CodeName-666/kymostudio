@@ -1,51 +1,39 @@
-# This Python file uses the following encoding: utf-8
-import sys
-import glob
-import logging
+"""Backward-compatible adapter for the modern serial receiver."""
 
-from typing import List, Dict
-import serial
-import serial.tools.list_ports
-from Receiver.Serial.serial_config import SerialConfig
-from receiver_thread import ReceiverThread
+from __future__ import annotations
+
+from typing import Any, Dict
+
+from ..serial_receiver import SerialReceiver
 
 
-class SerialConnection(ReceiverThread):
-    def __init__(self, port, baudrate):
-        ReceiverThread.__init__(self)
-        self.port = port
-        self.baudrate = baudrate
-        self.__serial = serial.Serial(self.port, self.baudrate)
-        
+class SerialConnection(SerialReceiver):
+    def __init__(self, port: str = "", baudrate: int = 115200) -> None:
+        super().__init__(
+            {
+                "port": port,
+                "baud": baudrate,
+                "size": "8Bit",
+                "parity": "None",
+                "stop_bits": "1Bit",
+            }
+        )
 
-    def run(self):
-        while not self.stopped():
-            if not self._pause:
-                data = self.__serial.readline()
-                self.new_data.emit(data)
-            else:
-                pass
+    def connect(self) -> bool:
+        self.start()
+        return self.is_connected()
 
-    def send_response(self, response):
-        self.__serial.write(response)
+    def disconnect(self) -> None:
+        self.stop()
 
-    def stop(self):
-        self.__serial.close() 
-       
-    def connect(self):
-        if self.__serial is not None:
-            if not self.__serial.isOpen():
-                self.__serial.open()
+    def connected(self) -> bool:
+        return self.is_connected()
 
-    def disconnect(self):
-        if self.__serial is not None:
-            if self.connected():
-                self.__serial.close()
-
-    def connected(self):
-        return self.__serial.isOpen()
-
-    def config(self, config: Dict):
-        self.__config = SerialConfig(config)
+    def config(self, config: Dict[str, Any]) -> None:
+        normalized = dict(config or {})
+        if "baudrate" in normalized and "baud" not in normalized:
+            normalized["baud"] = normalized.pop("baudrate")
+        super().config(normalized)
 
 
+__all__ = ["SerialConnection"]

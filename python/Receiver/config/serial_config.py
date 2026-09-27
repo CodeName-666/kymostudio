@@ -1,6 +1,6 @@
 
 import serial.tools.list_ports
-from PySide6.QtCore import QObject, Slot, Signal, QTimer
+from PySide6.QtCore import QObject, QTimer
 
 
 SerialSize = {

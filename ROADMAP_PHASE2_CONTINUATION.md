@@ -36,7 +36,7 @@
    - Abstrakte Basis für alle Chart-Typen
    - ChartType Enum (XY_LINE, XY_SCATTER, XYZ_SURFACE, XYZ_SCATTER)
 
-5. **3D Protocol Support** (`python/Receiver/message.py`, `embedded/common/plotter.h/cpp`)
+5. **3D Protocol Support** (`python/Receiver/message.py`, `../PlotterEcu/lib/PlotterLib/src/plotter.h/cpp`)
    - PlotDataPoint mit z_value für 3D-Daten
    - send3D() Methoden in embedded library
 

@@ -2,12 +2,10 @@
 import typing
 from os.path import abspath, dirname, join
 from Backend.backend import Backend
-from Receiver.receiver import Receiver
 from Backend.Windows.window_manager_bridge import WindowManagerBridge
-from Logger import logger
 from PySide6.QtWidgets import QApplication
 from PySide6.QtQml import QQmlApplicationEngine
-from PySide6.QtCore import QObject, Slot, Signal
+from PySide6.QtCore import QObject
 
 
 class Plotter(QObject):
@@ -25,16 +23,12 @@ class Plotter(QObject):
         # of the QML file, to load it.
         self.__qmlFile = join(dirname(__file__), '../../qml/main.qml')
 
-        self.__backend: Backend = None
-        self.__receiver: Receiver = None
-        self.__window_manager: WindowManagerBridge = None
+        self.__backend: Backend | None = None
+        self.__window_manager: WindowManagerBridge | None = None
 
     def set_backend(self, backend: Backend):
         self.__backend = backend
         self.__context.setContextProperty("Backend", backend)
-
-    def set_reveiver(self, receiver: Receiver):
-        self.__receiver = receiver
 
     def set_window_manager(self, window_manager: WindowManagerBridge):
         self.__window_manager = window_manager
@@ -55,9 +49,3 @@ class Plotter(QObject):
             importlst.append(join(dirname(__file__), path))
         self.__engine.setImportPathList(importlst)
 
-    def setup(self, config: dict):
-        pass
-
-    def connect_signals(self):
-        pass
-    

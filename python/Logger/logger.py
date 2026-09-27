@@ -31,7 +31,7 @@ class Logger(QObject):
 
     @staticmethod
     def get_instance():
-        if Logger.__instance == None:
+        if Logger.__instance is None:
             Logger()
         return Logger.__instance
 
@@ -70,11 +70,14 @@ class Logger(QObject):
             elif(type == 'STACK'):
                 logging.debug(msg, *args, **kwargs)
             else:
-                logging.debug('INVALID LOG_TYPE: '.format(
-                    msg), *args, **kwargs)
+                logging.debug('INVALID LOG_TYPE: %s', msg)
 
         if self.console_log:
-            print("{oType} - {oMsg}".format(oType=type, oMsg=msg))
+            try:
+                rendered_message = str(msg) % args if args else str(msg)
+            except (TypeError, ValueError):
+                rendered_message = " ".join((str(msg), *(str(arg) for arg in args)))
+            print("{oType} - {oMsg}".format(oType=type, oMsg=rendered_message))
 
     def log_qml_message(self, type: str, msg, *args, **kwargs):
         self.log_message(type, 'QML - {}'.format(msg), *args, **kwargs)

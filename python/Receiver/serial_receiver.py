@@ -12,6 +12,7 @@ from Logger import logger
 
 from .receiver import Receiver
 from .receiver_thread import ReceiverThread
+from .binary_protocol import ProtocolStreamDecoder, is_binary_frame
 
 
 def available_serial_ports() -> Dict[str, str]:
@@ -30,12 +31,14 @@ class SerialWorkerThread(ReceiverThread):
     def __init__(self, serial_port: serial.Serial) -> None:
         super().__init__()
         self._serial = serial_port
+        self._protocol_decoder = ProtocolStreamDecoder()
 
     def run(self) -> None:
         logger.log_info("Serial worker thread started")
         while not self.stopped():
             try:
-                payload = self._serial.readline()
+                waiting = self._serial.in_waiting
+                payload = self._serial.read(min(max(waiting, 1), 4096))
             except SerialException as exc:
                 logger.log_error(f"Serial worker read failed: {exc}")
                 break
@@ -46,7 +49,8 @@ class SerialWorkerThread(ReceiverThread):
             if not payload:
                 continue
 
-            self.new_data.emit(payload)
+            for message in self._protocol_decoder.feed(payload):
+                self.new_data.emit(message)
 
         logger.log_info("Serial worker thread stopped")
 
@@ -204,6 +208,8 @@ class SerialReceiver(Receiver):
 
         if payload is None:
             return None
+        if is_binary_frame(payload):
+            return payload
         return payload.rstrip(b"\r\n")
 
 

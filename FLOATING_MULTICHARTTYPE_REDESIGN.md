@@ -312,7 +312,7 @@ class PlotDataPoint:
 ### Embedded Protocol Extension:
 
 ```cpp
-// embedded/common/plotter.h
+// ../PlotterEcu/lib/PlotterLib/src/plotter.h
 
 // Neue send() Methode für 3D Daten
 void send(uint8_t channelId, float yValue, float zValue, uint32_t currentTimeMs);

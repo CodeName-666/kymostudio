@@ -6,9 +6,8 @@ creation logic so the backend can simply work with the resulting
 ``receiver_list`` without worrying about the transport specific constructor
 details.
 
-At the moment we provide placeholder receivers for all interfaces that are
-declared inside ``config/config.json``. Transport specific receivers can hook
-into the registry later by registering their factory via ``register_factory``.
+All built-in transports are registered here. Additional transports can hook
+into the registry by registering their factory via ``register_factory``.
 """
 
 from __future__ import annotations
@@ -20,9 +19,10 @@ from Logger import logger
 
 from .receiver import Receiver
 from .serial_receiver import SerialReceiver
-from .telnet_receiver import TelnetClientReceiver, TelnetServerReceiver
+from .telnet_receiver import TelnetClientReceiver
 from .mqtt_receiver import MqttReceiver
 from .test_receiver import TestReceiver
+from .can_receiver import CanReceiver
 
 
 ReceiverFactory = Callable[[Dict[str, Any]], Optional[Receiver]]
@@ -65,7 +65,7 @@ class ReceiverRegistry:
 
     def __init__(self) -> None:
         self._factories: Dict[str, ReceiverFactory] = {}
-        self._register_placeholder_factories()
+        self._register_builtin_factories()
 
     def register_factory(self, interface_type: str, factory: ReceiverFactory) -> None:
         """Register or override the factory for a specific interface type."""
@@ -132,7 +132,7 @@ class ReceiverRegistry:
 
         return receivers
 
-    def _register_placeholder_factories(self) -> None:
+    def _register_builtin_factories(self) -> None:
         self.register_factory(
             "Serial", lambda cfg: SerialReceiver(cfg.get("default", {}))
         )
@@ -143,7 +143,7 @@ class ReceiverRegistry:
             "MQTT", lambda cfg: MqttReceiver(cfg.get("default", {}))
         )
         self.register_factory(
-            "CAN", lambda cfg: TestReceiver(cfg.get("default", {}))
+            "CAN", lambda cfg: CanReceiver(cfg.get("default", {}))
         )
         self.register_factory(
             "Test", lambda cfg: TestReceiver(cfg.get("default", {}))

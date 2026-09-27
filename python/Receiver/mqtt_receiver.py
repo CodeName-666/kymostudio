@@ -13,6 +13,7 @@ from Logger import logger
 
 from .receiver import Receiver
 from .receiver_thread import ReceiverThread
+from .binary_protocol import ProtocolStreamDecoder, is_binary_frame
 
 
 def normalize_payload(topic: str, payload: bytes) -> bytes:
@@ -52,6 +53,9 @@ def _extract_plotter_payload_lines(payload: bytes) -> list[bytes]:
 
     if not payload:
         return []
+
+    if is_binary_frame(payload):
+        return ProtocolStreamDecoder(max_buffer_size=max(8192, len(payload))).feed(payload)
 
     candidates = [line.strip() for line in payload.splitlines() if line.strip()]
     if not candidates:

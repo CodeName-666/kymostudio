@@ -4,20 +4,17 @@ from PySide6.QtQml import QJSValue
 from Logger import logger
 
 
-class Converter():
-    def __init__(self) -> None:
-        pass
-
+class Converter:
     @staticmethod
     def list_to_jsvalue(data_list):
         value = QJSValue()
         for i in range(len(data_list)):
             logger.log_debug('key = {}: | value = {} | type = {}'.format(
                 i, data_list[i], type(data_list[i])))
-            if(type(data_list[i]) == dict):
+            if isinstance(data_list[i], dict):
                 sub_value = Converter.dict_to_jsvalue(data_list[i])
                 value.setProperty(i, sub_value)
-            elif type(data_list[i]) == list:
+            elif isinstance(data_list[i], list):
                 sub_value = Converter.list_to_jsvalue(data_list[i])
                 value.setProperty(i, sub_value)
             else:
@@ -30,17 +27,15 @@ class Converter():
         for (k, v) in data_dict.items():
             logger.log_debug(
                 'key = {}: | value = {} | type = {}'.format(k, v, type(v)))
-            if(type(v) == dict):
+            if isinstance(v, dict):
                 sub_value = Converter.dict_to_jsvalue(v)
                 value.setProperty(k, sub_value)
-            elif type(v) == list:
+            elif isinstance(v, list):
                 sub_value = Converter.list_to_jsvalue(v)
                 value.setProperty(k, sub_value)
             else:
                 value.setProperty(k, v)
         return value
-
-        print("Key = {} | Value = {} | Type = {}".format(k, v, type(v)))
 
     @staticmethod
     def jsvalue_to_dict(jsvalue: Any):

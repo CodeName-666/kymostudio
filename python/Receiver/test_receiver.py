@@ -24,6 +24,8 @@ class TestReceiver(Receiver):
     - Multi: Multiple data IDs with different patterns
     """
 
+    __test__ = False
+
     def __init__(self, defaults: Optional[Dict[str, Any]] = None) -> None:
         super().__init__(receiver_thread=None)
         self._settings: Dict[str, Any] = defaults.copy() if defaults else {}

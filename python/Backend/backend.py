@@ -1,19 +1,26 @@
 # This Python file uses the following encoding: utf-8
 import hashlib
 import json
+import math
+import os
+import tempfile
 import time
+from copy import deepcopy
 from dataclasses import dataclass, field
 from functools import partial
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import unquote, urlparse
 
 from PySide6 import QtCharts
-from PySide6.QtCore import QObject, Slot, Signal, QTimer, QJsonValue, Property, QRectF
+from PySide6.QtCore import QObject, Slot, Signal, QTimer, Property, QRectF
 from PySide6.QtQml import QJSValue
 from serial.tools import list_ports
 
 from Receiver.receiver import Receiver
 from Receiver.registry import ReceiverRegistry, parse_interface_definitions
 from Receiver.message import PlotDataPoint
+from Receiver.binary_protocol import ProtocolError, decode_data_frame, is_binary_frame
 from Common.converter import Converter
 from Logger import logger
 from Logger.logger import Logger
@@ -90,6 +97,7 @@ class Backend(QObject):
         self._backend_events: QObject | None = None
         self._ui_handle: QObject | None = None
         self._graph_state: Dict[str, Dict[str, Any]] = {}  # Key: unique_id (format: "interface_id")
+        self._chart_line_overrides: Dict[str, Dict[str, str]] = {}
         self._pending_events: Dict[str, List[tuple]] = {}
         self._app_start_time: float = time.time()  # For timestamp normalization
         self._ignored_signals: set[str] = set()  # unique_id values to ignore (disabled signals)
@@ -97,7 +105,9 @@ class Backend(QObject):
         # Multi-connection management (primary system)
         self.__connections: Dict[str, ConnectionInfo] = {}  # connection_id -> ConnectionInfo
         self.__connection_counter: int = 0  # Counter for generating unique IDs
-        self.__config_path: str = "config/config.json"
+        self.__config_path: str = str(
+            Path(__file__).resolve().parents[2] / "config" / "config.json"
+        )
 
         # Chart helpers
         self.__graph_list: Dict[str, _GraphBuffer] = {}
@@ -109,7 +119,7 @@ class Backend(QObject):
         self.__scroll_step = 5
 
         # Performance optimization: Batch updates
-        self._point_buffer: Dict[str, List[Tuple[float, float, float]]] = {}
+        self._point_buffer: Dict[str, List[Tuple[float, float, float, bool]]] = {}
         self._point_buffer_3d: Dict[str, List[Tuple[float, float, float]]] = {}
         self._batch_timer = QTimer(self)
         self._batch_timer.timeout.connect(self._flush_point_buffer)
@@ -246,6 +256,64 @@ class Backend(QObject):
         self._notify_status("error", f"No connection found for type: {connection_type}")
         return False
 
+    @Slot(result="bool")
+    def connect(self) -> bool:
+        """Start the connection selected through the legacy settings API.
+
+        Older QML components first assign ``interface`` and then call this
+        no-argument method.  If no interface was selected, a single configured
+        connection is unambiguous and can safely be started.
+        """
+        if self.__interface:
+            return self.connectTo(self.__interface)
+
+        if len(self.__connections) == 1:
+            return self.start_connection(next(iter(self.__connections)))
+
+        self._notify_status(
+            "error",
+            "Select an interface before connecting" if self.__connections else "No connection configured",
+        )
+        return False
+
+    @Slot(result="bool")
+    def is_connect(self) -> bool:
+        """Return whether the selected (or any) connection is active."""
+        connections = self.__connections.values()
+        if self.__interface:
+            connections = (
+                item for item in connections if item.interface_type == self.__interface
+            )
+        return any(item.status != "disconnected" for item in connections)
+
+    @Slot(result="bool")
+    def connected(self) -> bool:
+        """Compatibility alias used by the original BackendProvider."""
+        return self.is_connect()
+
+    @Slot(str, result="bool")
+    def disconnectFrom(self, connection_type: str) -> bool:
+        """Legacy counterpart to connectTo for reusable QML controls."""
+        matching_connections = [
+            (connection_id, connection)
+            for connection_id, connection in self.__connections.items()
+            if connection.interface_type == connection_type
+        ]
+        if not matching_connections:
+            self._notify_status("error", f"No connection found for type: {connection_type}")
+            return False
+
+        # Prefer the active connection when multiple instances share a type.
+        connection_id, _ = next(
+            (
+                item
+                for item in matching_connections
+                if item[1].status != "disconnected"
+            ),
+            matching_connections[0],
+        )
+        return self.stop_connection(connection_id)
+
     def config(self, config: dict) -> None:
         if not config:
             logger.log_error("Backend configuration missing")
@@ -255,6 +323,7 @@ class Backend(QObject):
         self.__interfaces_config = parse_interface_definitions(config.get("interfaces", []))
         self.__scroll_step = config.get("scroll_step", self.__scroll_step)
         self._graph_state.clear()
+        self._chart_line_overrides.clear()
 
         # Load default templates from interface config
         self.__default_templates.clear()
@@ -307,8 +376,9 @@ class Backend(QObject):
         self._save_templates_to_config()
         return True
 
+    @Slot(result="bool")
     @Slot(str, result="bool")
-    def settings_valid(self, connection_type: str) -> bool:
+    def settings_valid(self, connection_type: str = "") -> bool:
         """Check if settings for an interface type are valid.
 
         Note: This is a simplified check - actual validation happens when creating/updating connections.
@@ -319,7 +389,17 @@ class Backend(QObject):
         Returns:
             True if the interface type exists, False otherwise
         """
-        return connection_type in self.__default_templates
+        selected_type = connection_type or self.__interface
+        return bool(selected_type) and selected_type in self.__default_templates
+
+    @Slot(str, result="QVariant")
+    def get_settings(self, interface_type: str) -> Dict[str, Any]:
+        """Return an isolated copy of an interface's default settings."""
+        settings = self.__default_templates.get(interface_type)
+        if settings is None:
+            self._notify_status("warning", f"Unknown interface type: {interface_type}")
+            return {}
+        return deepcopy(settings)
 
     @Slot(result="QVariant")
     def get_ui_config(self):
@@ -414,6 +494,8 @@ class Backend(QObject):
             del self.__graph_list[unique_id]
             logger.log_info(f"Removed chart line series: {unique_id}")
 
+        self._chart_line_overrides.pop(unique_id, None)
+
         return True
 
     @Slot(str, bool)
@@ -446,13 +528,13 @@ class Backend(QObject):
         Returns:
             True if updated successfully, False otherwise
         """
-        if unique_id not in self._graph_state:
-            logger.log_warning(f"Cannot update - chart line not found: {unique_id}")
-            return False
-
-        # Update state
-        self._graph_state[unique_id]["display_name"] = display_name
-        self._graph_state[unique_id]["color"] = color
+        self._chart_line_overrides[unique_id] = {
+            "display_name": display_name,
+            "color": color,
+        }
+        if unique_id in self._graph_state:
+            self._graph_state[unique_id]["display_name"] = display_name
+            self._graph_state[unique_id]["color"] = color
 
         logger.log_info(f"Updated chart line: {unique_id} - Name: {display_name}, Color: {color}")
         return True
@@ -495,6 +577,11 @@ class Backend(QObject):
                         display_name = str(tpl.get("displayName", display_name))
                         color = str(tpl.get("color", color))
                         break
+
+            override = self._chart_line_overrides.get(unique_id)
+            if override:
+                display_name = override["display_name"]
+                color = override["color"]
 
             state = {
                 "id": data_point.id,
@@ -581,13 +668,20 @@ class Backend(QObject):
 
         # Send point to QML - use batching for better performance
         if self._batch_enabled:
-            self._buffer_point(unique_id, x_value, float(data_point.value), time_value)
+            self._buffer_point(
+                unique_id,
+                x_value,
+                float(data_point.value),
+                time_value,
+                getattr(data_point, "x", None) is not None,
+            )
         else:
             # Legacy: direct send (slower)
             point = {
                 "x": x_value,
                 "y": float(data_point.value),
                 "t": time_value,
+                "hasExplicitX": getattr(data_point, "x", None) is not None,
                 "timestamp": float(data_point.timestamp) if data_point.timestamp is not None else None,
                 "z": float(data_point.z_value) if getattr(data_point, "z_value", None) is not None else None,
             }
@@ -635,6 +729,13 @@ class Backend(QObject):
         if not payload:
             return None
 
+        if is_binary_frame(payload):
+            try:
+                return decode_data_frame(payload)
+            except ProtocolError as exc:
+                self._notify_status("warning", f"{interface}: {exc}")
+                return None
+
         try:
             text = payload.decode("utf-8").strip()
         except UnicodeDecodeError:
@@ -654,6 +755,8 @@ class Backend(QObject):
             # Fallback: Try as plain number
             try:
                 value = float(text)
+                if not math.isfinite(value):
+                    raise ValueError
                 # Fallback: id=0, no timestamp (will use auto-increment)
                 return PlotDataPoint(id=0, value=value, timestamp=None)
             except ValueError:
@@ -675,6 +778,8 @@ class Backend(QObject):
                 except json.JSONDecodeError:
                     try:
                         value = float(inner_text)
+                        if not math.isfinite(value):
+                            raise ValueError
                         return PlotDataPoint(id=0, value=value, timestamp=None)
                     except ValueError:
                         return None
@@ -705,15 +810,26 @@ class Backend(QObject):
             if not isinstance(value, (int, float)):
                 self._notify_status("warning", f"{interface}: 'value' must be numeric, got {type(value)}")
                 return None
+            if not math.isfinite(float(value)):
+                self._notify_status("warning", f"{interface}: 'value' must be finite")
+                return None
 
             # Validate X (optional)
             if x_value is not None and not isinstance(x_value, (int, float)):
                 self._notify_status("warning", f"{interface}: 'x' must be numeric or omitted, got {type(x_value)}")
                 return None
+            if x_value is not None and not math.isfinite(float(x_value)):
+                self._notify_status("warning", f"{interface}: 'x' must be finite")
+                return None
 
             # Validate timestamp (optional)
             if timestamp is not None and not isinstance(timestamp, (int, float)):
                 self._notify_status("warning", f"{interface}: 'timestamp' must be numeric or omitted, got {type(timestamp)}")
+                return None
+            if timestamp is not None and (
+                not math.isfinite(float(timestamp)) or float(timestamp) < 0
+            ):
+                self._notify_status("warning", f"{interface}: 'timestamp' must be finite and non-negative")
                 return None
 
             # Validate z_value (optional)
@@ -732,10 +848,17 @@ class Backend(QObject):
             except ValueError as e:
                 self._notify_status("warning", f"{interface}: invalid data point: {e}")
                 return None
+            if z_value is not None and not math.isfinite(float(z_value)):
+                self._notify_status("warning", f"{interface}: 'z' must be finite")
+                return None
 
         # Handle plain number in JSON
         if isinstance(decoded, (int, float)):
-            return PlotDataPoint(id=0, value=float(decoded), timestamp=None)
+            value = float(decoded)
+            if math.isfinite(value):
+                return PlotDataPoint(id=0, value=value, timestamp=None)
+            self._notify_status("warning", f"{interface}: numeric payload must be finite")
+            return None
 
         self._notify_status("warning", f"{interface}: unexpected JSON format")
         return None
@@ -809,7 +932,14 @@ class Backend(QObject):
     # ------------------------------------------------------------------ #
     # Batch update methods for performance optimization
     # ------------------------------------------------------------------ #
-    def _buffer_point(self, unique_id: str, x: float, y: float, t: float) -> None:
+    def _buffer_point(
+        self,
+        unique_id: str,
+        x: float,
+        y: float,
+        t: float,
+        has_explicit_x: bool = True,
+    ) -> None:
         """Buffer a point for batch sending to QML.
 
         Points are collected and sent in batches to reduce QML/JavaScript overhead.
@@ -819,8 +949,9 @@ class Backend(QObject):
         if unique_id not in self._point_buffer:
             self._point_buffer[unique_id] = []
 
-        # Store as [x, y, t] so different chart types can pick the right coordinate.
-        self._point_buffer[unique_id].append((x, y, t))
+        # Store both coordinate sets and their provenance. Cartesian XY renderers
+        # must not mistake a time fallback for a protocol-supplied X coordinate.
+        self._point_buffer[unique_id].append((x, y, t, has_explicit_x))
 
         # Flush immediately if buffer is full
         if len(self._point_buffer[unique_id]) >= self._batch_size:
@@ -854,8 +985,14 @@ class Backend(QObject):
         if not points:
             return
 
-        # Send batch to QML
-        self._queue_event("append_graph_points_batch", unique_id, points)
+        # Inner Python tuples remain opaque QVariant values in QML on some
+        # PySide versions. Convert them explicitly so JS indexing yields
+        # numeric coordinates rather than undefined/NaN.
+        self._queue_event(
+            "append_graph_points_batch",
+            unique_id,
+            [list(point) for point in points],
+        )
 
         # Clear buffer
         self._point_buffer[unique_id] = []
@@ -868,7 +1005,11 @@ class Backend(QObject):
         if not points:
             return
 
-        self._queue_event("append_graph_points_batch_3d", unique_id, points)
+        self._queue_event(
+            "append_graph_points_batch_3d",
+            unique_id,
+            [list(point) for point in points],
+        )
         self._point_buffer_3d[unique_id] = []
 
     def _flush_message_updates(self) -> None:
@@ -1060,6 +1201,219 @@ class Backend(QObject):
             True if saved successfully, False otherwise
         """
         return self._save_templates_to_config()
+
+    @Slot(str, result=bool)
+    def save_configuration_to_file(self, file_url: str) -> bool:
+        """Export the complete current configuration to a user-selected file."""
+        try:
+            target = self._path_from_file_url(file_url)
+            config = self._configuration_snapshot()
+            self._write_json_atomic(target, config)
+            self._notify_status("success", f"Configuration saved to {target.name}")
+            logger.log_info("Configuration exported to %s", target)
+            return True
+        except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            logger.log_error("Failed to export configuration: %s", exc)
+            self._notify_status("error", f"Could not save configuration: {exc}")
+            return False
+
+    @Slot(str, result=bool)
+    def load_configuration_from_file(self, file_url: str) -> bool:
+        """Import, persist, and immediately apply a selected configuration."""
+        try:
+            source = self._path_from_file_url(file_url)
+            with source.open("r", encoding="utf-8") as config_file:
+                config = json.load(config_file)
+            self._validate_configuration(config)
+
+            # Persist first. If this fails, the running state remains untouched.
+            self._write_json_atomic(Path(self.__config_path), config)
+            self._clear_runtime_state_for_configuration_reload()
+            self.config(config)
+            self._notify_status("success", f"Configuration loaded from {source.name}")
+            logger.log_info("Configuration imported from %s", source)
+            return True
+        except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            logger.log_error("Failed to import configuration: %s", exc)
+            self._notify_status("error", f"Could not load configuration: {exc}")
+            return False
+
+    @staticmethod
+    def _path_from_file_url(file_url: str) -> Path:
+        """Convert a QML FileDialog URL (or a normal path) into a local path."""
+        value = str(file_url).strip()
+        if not value:
+            raise ValueError("No file selected")
+
+        # A Windows drive path is parsed as a URL scheme by urlparse.
+        if len(value) >= 3 and value[1] == ":" and value[2] in ("/", "\\"):
+            return Path(value)
+
+        parsed = urlparse(value)
+        if parsed.scheme not in ("", "file"):
+            raise ValueError(f"Unsupported URL scheme: {parsed.scheme}")
+        if not parsed.scheme:
+            return Path(unquote(value))
+
+        path = unquote(parsed.path)
+        if parsed.netloc:
+            path = f"//{parsed.netloc}{path}"
+        elif os.name == "nt" and len(path) >= 3 and path[0] == "/" and path[2] == ":":
+            path = path[1:]
+        return Path(path)
+
+    def _configuration_snapshot(self) -> Dict[str, Any]:
+        """Build a JSON-serializable snapshot from the current backend state."""
+        config_path = Path(self.__config_path)
+        if config_path.exists():
+            with config_path.open("r", encoding="utf-8") as config_file:
+                config = json.load(config_file)
+            if not isinstance(config, dict):
+                raise ValueError("The current configuration root must be an object")
+        else:
+            config = {}
+
+        snapshot = deepcopy(config)
+        existing_interfaces = {
+            item.get("type"): deepcopy(item)
+            for item in snapshot.get("interfaces", [])
+            if isinstance(item, dict) and item.get("type")
+        }
+        snapshot["interfaces"] = []
+        for interface_type, definition in self.__interfaces_config.items():
+            interface_config = existing_interfaces.get(interface_type, {"type": interface_type})
+            interface_config["default"] = deepcopy(
+                self.__default_templates.get(interface_type, definition.defaults)
+            )
+            snapshot["interfaces"].append(interface_config)
+
+        snapshot["saved_connections"] = [
+            {
+                "id": connection_id,
+                "type": info.interface_type,
+                "name": info.display_name,
+                "settings": deepcopy(info.settings),
+                "created_at": info.created_at,
+            }
+            for connection_id, info in sorted(
+                self.__connections.items(), key=lambda item: item[1].created_at
+            )
+        ]
+        return snapshot
+
+    @staticmethod
+    def _validate_configuration(config: Any) -> None:
+        if not isinstance(config, dict):
+            raise ValueError("Configuration root must be an object")
+
+        interfaces = config.get("interfaces")
+        if not isinstance(interfaces, list) or not interfaces:
+            raise ValueError("Configuration must contain at least one interface")
+
+        interface_types: set[str] = set()
+        for item in interfaces:
+            if not isinstance(item, dict):
+                raise ValueError("Every interface entry must be an object")
+            interface_type = item.get("type")
+            defaults = item.get("default", {})
+            if not isinstance(interface_type, str) or not interface_type.strip():
+                raise ValueError("Every interface requires a type")
+            if interface_type in interface_types:
+                raise ValueError(f"Duplicate interface type: {interface_type}")
+            if not isinstance(defaults, dict):
+                raise ValueError(f"Defaults for {interface_type} must be an object")
+            interface_types.add(interface_type)
+
+        saved_connections = config.get("saved_connections", [])
+        if not isinstance(saved_connections, list):
+            raise ValueError("saved_connections must be an array")
+        connection_ids: set[str] = set()
+        for connection in saved_connections:
+            if not isinstance(connection, dict):
+                raise ValueError("Every saved connection must be an object")
+            connection_id = connection.get("id")
+            interface_type = connection.get("type")
+            display_name = connection.get("name")
+            settings = connection.get("settings", {})
+            if not all(isinstance(value, str) and value for value in (
+                connection_id,
+                interface_type,
+                display_name,
+            )):
+                raise ValueError("Saved connections require id, type, and name")
+            if connection_id in connection_ids:
+                raise ValueError(f"Duplicate connection id: {connection_id}")
+            if interface_type not in interface_types:
+                raise ValueError(
+                    f"Connection {connection_id} references unknown interface {interface_type}"
+                )
+            if not isinstance(settings, dict):
+                raise ValueError(f"Settings for {connection_id} must be an object")
+            connection_ids.add(connection_id)
+
+    @staticmethod
+    def _write_json_atomic(target: Path, config: Dict[str, Any]) -> None:
+        target = target.resolve()
+        target.parent.mkdir(parents=True, exist_ok=True)
+        temp_name: str | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                "w",
+                encoding="utf-8",
+                dir=target.parent,
+                prefix=f".{target.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as temp_file:
+                temp_name = temp_file.name
+                json.dump(config, temp_file, indent=2)
+                temp_file.write("\n")
+            os.replace(temp_name, target)
+            temp_name = None
+        finally:
+            if temp_name:
+                try:
+                    Path(temp_name).unlink()
+                except FileNotFoundError:
+                    pass
+
+    def _clear_runtime_state_for_configuration_reload(self) -> None:
+        removed_signal_ids = set(self._graph_state)
+        removed_signal_ids.update(self.__graph_list)
+        removed_signal_ids.update(self._point_buffer)
+        removed_signal_ids.update(self._point_buffer_3d)
+        removed_signal_ids.update(self._last_emit_time)
+        removed_signal_ids.update(self._message_state)
+        removed_signal_ids.update(self._chart_line_overrides)
+        removed_signal_ids.update(self._dirty_messages)
+        removed_signal_ids.update(self._ignored_signals)
+
+        for connection in self.__connections.values():
+            if connection.receiver is None:
+                continue
+            try:
+                connection.receiver.stop()
+            except Exception as exc:
+                logger.log_warning(
+                    "Could not stop connection %s during config import: %s",
+                    connection.connection_id,
+                    exc,
+                )
+
+        self.__connections.clear()
+        self.__connection_counter = 0
+        self._graph_state.clear()
+        self.__graph_list.clear()
+        self._point_buffer.clear()
+        self._point_buffer_3d.clear()
+        self._last_emit_time.clear()
+        self._message_state.clear()
+        self._chart_line_overrides.clear()
+        self._dirty_messages.clear()
+        self._ignored_signals.clear()
+        self._pending_events.clear()
+        if removed_signal_ids:
+            self._queue_event("signals_removed", sorted(removed_signal_ids))
 
     @Slot(str, "QVariant", result="bool")
     def save_preset(self, file_url: str, preset: Dict[str, Any]) -> bool:
@@ -1278,14 +1632,71 @@ class Backend(QObject):
             self._notify_status("error", f"Cannot delete active connection: {conn_info.display_name}")
             return False
 
-        # Clean up discovered signal state for this connection
+        # Clean up every discovered-signal cache for this connection before
+        # notifying QML. Pending events must be scrubbed as well, otherwise a
+        # queued newGraph/message update can recreate a deleted signal.
         prefix = f"{connection_id}_"
-        for unique_id in list(self._graph_state.keys()):
-            if unique_id.startswith(prefix):
-                self._graph_state.pop(unique_id, None)
-                self.__graph_list.pop(unique_id, None)
-                self._point_buffer.pop(unique_id, None)
-                self._last_emit_time.pop(unique_id, None)
+        removed_signal_ids = {
+            unique_id
+            for state in (
+                self._graph_state,
+                self.__graph_list,
+                self._point_buffer,
+                self._point_buffer_3d,
+                self._last_emit_time,
+                self._message_state,
+                self._chart_line_overrides,
+            )
+            for unique_id in state
+            if unique_id.startswith(prefix)
+        }
+        removed_signal_ids.update(
+            unique_id
+            for unique_id in self._dirty_messages | self._ignored_signals
+            if unique_id.startswith(prefix)
+        )
+        for pending in self._pending_events.values():
+            for args in pending:
+                first_arg = args[0] if args else None
+                pending_unique_id = (
+                    first_arg.get("uniqueId")
+                    if isinstance(first_arg, dict)
+                    else first_arg
+                )
+                if isinstance(pending_unique_id, str) and pending_unique_id.startswith(prefix):
+                    removed_signal_ids.add(pending_unique_id)
+
+        for unique_id in removed_signal_ids:
+            self._graph_state.pop(unique_id, None)
+            self.__graph_list.pop(unique_id, None)
+            self._point_buffer.pop(unique_id, None)
+            self._point_buffer_3d.pop(unique_id, None)
+            self._last_emit_time.pop(unique_id, None)
+            self._message_state.pop(unique_id, None)
+            self._chart_line_overrides.pop(unique_id, None)
+            self._dirty_messages.discard(unique_id)
+            self._ignored_signals.discard(unique_id)
+
+        for signal_name, pending in list(self._pending_events.items()):
+            if signal_name == "signals_removed":
+                continue
+            retained = []
+            for args in pending:
+                first_arg = args[0] if args else None
+                event_unique_id = (
+                    first_arg.get("uniqueId")
+                    if isinstance(first_arg, dict)
+                    else first_arg
+                )
+                if event_unique_id not in removed_signal_ids:
+                    retained.append(args)
+            if retained:
+                self._pending_events[signal_name] = retained
+            else:
+                self._pending_events.pop(signal_name, None)
+
+        if removed_signal_ids:
+            self._queue_event("signals_removed", sorted(removed_signal_ids))
 
         # Remove connection
         del self.__connections[connection_id]

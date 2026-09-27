@@ -1,47 +1,36 @@
+"""Backward-compatible adapter for the modern MQTT receiver."""
 
-from receiver_thread import ReceiverThread
-import paho.mqtt.client as mqtt
-from typing import Dict
+from __future__ import annotations
+
+from typing import Any, Dict
+
+from ..mqtt_receiver import MqttReceiver
 
 
-class MqttConnection(ReceiverThread):
-    def __init__(self, host, port, rx_topic, tx_topic):
-        ReceiverThread.__init__(self)
-        self.__host = host
-        self.__port = port
-        self.__rx_topic = rx_topic
-        self.__tx_topic = tx_topic
+class MqttConnection(MqttReceiver):
+    def __init__(
+        self,
+        host: str = "localhost",
+        port: int = 1883,
+        rx_topic: str = "plotter/rx",
+        tx_topic: str = "plotter/tx",
+    ) -> None:
+        super().__init__(
+            {"host": host, "port": port, "rx_topic": rx_topic, "tx_topic": tx_topic}
+        )
 
-        self.__client = mqtt.Client()
-        self.__client.on_connect = self.on_connect
-        self.__client.on_message = self.on_message
-        
+    def connect(self) -> bool:
+        self.start()
+        return self.is_connected()
 
-    def run(self):
-        self.__client.connect(self.__host, self.__port)
-        self.__client.loop_forever()
+    def disconnect(self) -> None:
+        self.stop()
 
-    def on_connect(self, client, userdata, flags, rc):
-        print("Connected with result code " + str(rc))
-        self.__client.subscribe(self.__rx_topic)
+    def connected(self) -> bool:
+        return self.is_connected()
 
-    def on_message(self, client, userdata, msg):
-        self.new_data.emit(msg.payload.decode())
+    def config(self, config: Dict[str, Any]) -> None:
+        super().config(config)
 
-    def send_response(self, response):
-        self.__client.publish(self.__tx_topic, response)
 
-    def stop(self):
-        self.__client.disconnect()
-    
-    def connect(self):
-        pass
-
-    def disconnect(self):
-        pass
-
-    def connected(self): 
-        pass
-
-    def config(self, config: Dict):
-        pass
+__all__ = ["MqttConnection"]

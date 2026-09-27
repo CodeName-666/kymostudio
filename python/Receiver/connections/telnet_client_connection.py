@@ -1,40 +1,32 @@
-# This Python file uses the following encoding: utf-8
-from telnetlib import Telnet
-from typing import Dict
-from .telnet_config import TelnetConfig
-from receiver_thread import ReceiverThread
+"""Backward-compatible adapter for the modern Telnet client receiver."""
+
+from __future__ import annotations
+
+from typing import Any, Dict, Optional
+
+from ..telnet_receiver import TelnetClientReceiver
 
 
+class TelnetClientConnection(TelnetClientReceiver):
+    def __init__(self, config: Optional[Dict[str, Any]] = None) -> None:
+        super().__init__(config or {"host": "localhost", "port": 23})
 
-class TelnetClientConnection(ReceiverThread):
-    def __init__(self, config: dict = None):
-        ReceiverThread.__init__(self)
-        self.__telnet = Telnet()     
-       #self.stop_event = threading.Event()
+    def init(self, config: Dict[str, Any]) -> None:
+        self.config(config)
 
-    def init(self, config: Dict):
-        pass
+    def connect(self) -> bool:
+        self.start()
+        return self.is_connected()
 
-    def run(self):
-        while not self.stopped():
-            data = self.__telnet.read_all()
-            self.new_data.emit(data)
+    def conect(self) -> bool:
+        """Compatibility for the misspelled method in the old API."""
+        return self.connect()
 
-    def send_response(self, response):
-        self.__telnet.write(response)
-      
-    def stop(self):
-        self.__telnet.close()
+    def disconnect(self) -> None:
+        self.stop()
 
-    def conect(self):
-        self.__telnet.open(self.settings["host"], self.settings["port"])
+    def connected(self) -> bool:
+        return self.is_connected()
 
-    def disconnect(self):
-        self.__telnet.close()
 
-    def connected(self):
-        pass
-
-    def config(self, config: dict):
-        self.__config = TelnetConfig(config)
-
+__all__ = ["TelnetClientConnection"]

@@ -108,7 +108,7 @@ class TimeSeriesChart(BaseChart):
         Returns:
             QML component path
         """
-        return "qrc:/qt/qml/content/ChartTypes/TimeSeriesChart.qml"
+        return "qrc:/qt/qml/content/ChartTypes/TimeSeriesRenderer.qml"
 
     def set_time_window(self, window_seconds: float) -> None:
         """Set the time window to display.

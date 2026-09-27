@@ -1,4 +1,4 @@
-from PySide6.QtCore import QThread, Signal, Slot,QObject
+from PySide6.QtCore import QObject, QThread, Signal, Slot
 from typing import Optional
 
 
@@ -12,13 +12,14 @@ class ReceiverThread(QThread):
         self.__stop: bool = False
         self.stop_event.connect(self.on_stop)
 
-    def stop(self):
-        pass
+    def stop(self) -> None:
+        """Request interruption for workers that also inspect Qt's flag."""
+        self.requestInterruption()
     
-    def stopped(self):
-        return self.__stop    
+    def stopped(self) -> bool:
+        return self.__stop or self.isInterruptionRequested()
 
     @Slot()
-    def on_stop(self):
+    def on_stop(self) -> None:
         self.__stop = True
         self.stop()

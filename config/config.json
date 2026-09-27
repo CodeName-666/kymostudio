@@ -42,6 +42,17 @@
         "use_timestamp": true,
         "sample_ms": 50
       }
+    },
+    {
+      "type": "CAN",
+      "default": {
+        "interface": "virtual",
+        "channel": "plotter",
+        "bitrate": 500000,
+        "value_format": "auto",
+        "scale": 1.0,
+        "offset": 0.0
+      }
     }
 
  
@@ -52,6 +63,7 @@
       "Serial",
       "Telnet",
       "MQTT",
+      "CAN",
       "Test"
     ]
   },

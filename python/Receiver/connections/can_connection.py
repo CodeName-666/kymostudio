@@ -1,31 +1,31 @@
-import can
-from receiver_thread import ReceiverThread
-from typing import Dict
+"""Backward-compatible adapter for the modern CAN receiver."""
 
-class CanConnection(ReceiverThread):
-    def __init__(self, channel, bustype):
-        ReceiverThread.__init__(self)
-        self.bus = can.interface.Bus(channel=channel, bustype=bustype)
+from __future__ import annotations
 
+from typing import Any, Dict
 
-    def run(self):
-        while not self.stopped():
-            if not self._pause:
-                message = self.bus.recv()
-                self.new_data.emit(message)
-
-    def send_response(self, response):
-        self.bus.send(response)
+from ..can_receiver import CanReceiver
 
 
-    def connect(self):
-        pass
+class CanConnection(CanReceiver):
+    def __init__(self, channel: Any = "plotter", bustype: str = "virtual") -> None:
+        super().__init__({"channel": channel, "interface": bustype, "value_format": "auto"})
 
-    def disconnect(self):
-        pass
+    def connect(self) -> bool:
+        self.start()
+        return self.is_connected()
 
-    def connected(self):
-        pass
+    def disconnect(self) -> None:
+        self.stop()
 
-    def config(self, config: Dict):
-        pass
+    def connected(self) -> bool:
+        return self.is_connected()
+
+    def config(self, config: Dict[str, Any]) -> None:
+        normalized = dict(config or {})
+        if "bustype" in normalized and "interface" not in normalized:
+            normalized["interface"] = normalized.pop("bustype")
+        super().config(normalized)
+
+
+__all__ = ["CanConnection"]

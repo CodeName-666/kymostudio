@@ -7,14 +7,13 @@ from typing import Any, Dict, Optional
 
 from PySide6.QtCore import QObject, Signal, Slot
 
+from .receiver_thread import ReceiverThread
+
 
 class MetaQObjectABC(type(QObject), ABCMeta):
     """Metaclass combining PySide's QObject meta type with ABCMeta."""
 
     pass
-
-from .receiver_thread import ReceiverThread
-
 
 class Receiver(QObject, metaclass=MetaQObjectABC):
     """Defines the lifecycle contract that every backend receiver must follow.

@@ -5,10 +5,10 @@ from .base_chart import BaseChart, ChartType, DataLine
 
 
 class XYLineChart(BaseChart):
-    """2D Line Chart implementation (standard PlotterApp chart).
+    """Cartesian 2D line chart using transmitted X and Y coordinates.
 
-    This is the default chart type for displaying time-series data
-    with X (time) and Y (value) coordinates.
+    Time-series charts are handled separately by ``TimeSeriesChart``. An XY
+    chart must never substitute elapsed time for an explicitly transmitted X.
 
     Attributes:
         axis_x_min: Minimum X-axis value
@@ -80,17 +80,15 @@ class XYLineChart(BaseChart):
         return 2
 
     def validate_data_point(self, point: Any) -> bool:
-        """Validate if data point has X and Y coordinates.
+        """Validate that a data point contains explicit X and Y coordinates.
 
         Args:
             point: PlotDataPoint to validate
 
         Returns:
-            True if point has x (timestamp) and y (value), or at least y
+            True only when the protocol supplied X and the point has Y/value
         """
-        # Point must have at minimum a 'value' (Y coordinate)
-        # X coordinate (timestamp) is optional and will be auto-generated if missing
-        return hasattr(point, 'value')
+        return getattr(point, "x", None) is not None and hasattr(point, "value")
 
     def get_qml_component(self) -> str:
         """Return QML component path for XY Line Chart.
@@ -98,7 +96,7 @@ class XYLineChart(BaseChart):
         Returns:
             QML component path
         """
-        return "qrc:/qt/qml/content/ChartTypes/XYChart.qml"
+        return "qrc:/qt/qml/content/ChartTypes/XYChartRenderer.qml"
 
     def set_axis_range(self, x_min: float, x_max: float, y_min: float, y_max: float) -> None:
         """Set axis ranges for this chart.
@@ -161,4 +159,4 @@ class XYScatterChart(XYLineChart):
         Returns:
             QML component path
         """
-        return "qrc:/qt/qml/content/ChartTypes/XYScatterChart.qml"
+        return "qrc:/qt/qml/content/ChartTypes/XYChartRenderer.qml"

@@ -10,6 +10,7 @@ from Logger import logger
 
 from .receiver import Receiver
 from .receiver_thread import ReceiverThread
+from .binary_protocol import ProtocolStreamDecoder
 
 
 class TelnetClientThread(ReceiverThread):
@@ -20,7 +21,7 @@ class TelnetClientThread(ReceiverThread):
         self._socket: Optional[socket.socket] = None
         self._reconnect_delay = max(1.0, reconnect_delay)
         self._read_size = 4096
-        self._buffer = b""
+        self._protocol_decoder = ProtocolStreamDecoder()
 
     def run(self) -> None:
         logger.log_info(
@@ -43,7 +44,7 @@ class TelnetClientThread(ReceiverThread):
                 continue
 
             if chunk:
-                self._emit_lines(chunk)
+                self._emit_messages(chunk)
             else:
                 logger.log_info("Telnet client remote closed connection")
                 self._close_socket()
@@ -87,23 +88,11 @@ class TelnetClientThread(ReceiverThread):
             except OSError:
                 pass
             self._socket = None
-        self._buffer = b""
+        self._protocol_decoder.reset()
 
-    def _emit_lines(self, chunk: bytes) -> None:
-        """Buffer incoming bytes and emit complete newline-delimited frames."""
-
-        if not chunk:
-            return
-
-        self._buffer += chunk
-
-        # Emit complete lines. Keep last partial line buffered.
-        while b"\n" in self._buffer:
-            line, rest = self._buffer.split(b"\n", 1)
-            self._buffer = rest
-            line = line.rstrip(b"\r")
-            if line:
-                self.new_data.emit(line)
+    def _emit_messages(self, chunk: bytes) -> None:
+        for message in self._protocol_decoder.feed(chunk):
+            self.new_data.emit(message)
 
 
 class TelnetServerThread(ReceiverThread):
@@ -115,7 +104,7 @@ class TelnetServerThread(ReceiverThread):
         self._client: Optional[socket.socket] = None
         self._reconnect_delay = max(1.0, reconnect_delay)
         self._read_size = 4096
-        self._buffer = b""
+        self._protocol_decoder = ProtocolStreamDecoder()
 
     def run(self) -> None:
         logger.log_info("Telnet server thread listening on %s:%s", self._host, self._port)
@@ -140,7 +129,7 @@ class TelnetServerThread(ReceiverThread):
                 continue
 
             if chunk:
-                self._emit_lines(chunk)
+                self._emit_messages(chunk)
             else:
                 logger.log_info("Telnet server client disconnected")
                 self._close_client()
@@ -206,7 +195,7 @@ class TelnetServerThread(ReceiverThread):
             except OSError:
                 pass
             self._client = None
-        self._buffer = b""
+        self._protocol_decoder.reset()
 
     def _close_listener(self) -> None:
         if self._listener:
@@ -216,20 +205,9 @@ class TelnetServerThread(ReceiverThread):
                 pass
             self._listener = None
 
-    def _emit_lines(self, chunk: bytes) -> None:
-        """Buffer incoming bytes and emit complete newline-delimited frames."""
-
-        if not chunk:
-            return
-
-        self._buffer += chunk
-
-        while b"\n" in self._buffer:
-            line, rest = self._buffer.split(b"\n", 1)
-            self._buffer = rest
-            line = line.rstrip(b"\r")
-            if line:
-                self.new_data.emit(line)
+    def _emit_messages(self, chunk: bytes) -> None:
+        for message in self._protocol_decoder.feed(chunk):
+            self.new_data.emit(message)
 
 
 class TelnetBaseReceiver(Receiver, ABC):
