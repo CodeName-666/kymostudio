@@ -61,6 +61,7 @@ class SerialWorkerThread(ReceiverThread):
             logger.log_error(f"Serial send failed: {exc}")
 
     def stop(self) -> None:
+        super().stop()
         try:
             if self._serial.is_open:
                 self._serial.close()

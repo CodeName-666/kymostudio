@@ -1,4 +1,5 @@
-pyserial
-pyside6
-python-can
-paho-mqtt
+# PySide6 includes Qt Quick, Qt Charts and Qt Quick 3D. Python 3.11–3.13.
+PySide6>=6.8.3,<6.9
+pyserial>=3.5,<4
+python-can>=4.5,<5
+paho-mqtt>=2.1,<3

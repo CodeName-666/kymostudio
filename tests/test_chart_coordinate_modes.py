@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+import pytest
+pytest.importorskip("PySide6", reason="Install requirements-dev.txt to run Qt integration tests")
+pytest.importorskip("can", reason="python-can transport dependency missing")
+pytest.importorskip("serial", reason="pyserial transport dependency missing")
+pytest.importorskip("paho.mqtt.client", reason="paho-mqtt transport dependency missing")
+
 import sys
 import unittest
 from pathlib import Path
@@ -23,7 +29,13 @@ class ChartCoordinateModeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.qt_app = QCoreApplication.instance() or QCoreApplication([])
+        Backend._Backend__backend_instance = None
         cls.backend = Backend()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.backend.shutdown()
+        Backend._Backend__backend_instance = None
 
     def _capture_buffered_point(self, payload: bytes) -> tuple:
         captured: list[tuple] = []

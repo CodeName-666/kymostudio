@@ -2,28 +2,32 @@
 import hashlib
 import json
 import math
-import os
-import tempfile
 import time
+from collections import deque
 from copy import deepcopy
 from dataclasses import dataclass, field
-from functools import partial
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import unquote, urlparse
 
 from PySide6 import QtCharts
 from PySide6.QtCore import QObject, Slot, Signal, QTimer, Property, QRectF
 from PySide6.QtQml import QJSValue
 from serial.tools import list_ports
 
-from Receiver.receiver import Receiver
 from Receiver.registry import ReceiverRegistry, parse_interface_definitions
 from Receiver.message import PlotDataPoint
-from Receiver.binary_protocol import ProtocolError, decode_data_frame, is_binary_frame
+from Receiver.binary_protocol import ProtocolError
 from Common.converter import Converter
 from Logger import logger
 from Logger.logger import Logger
+from Core.parsing import parse_payload
+from Core.buffering import peak_envelope, FrameBuffer
+from Core.configuration import atomic_json_write, local_path, validate_configuration, MAX_CONFIGURATION_BYTES
+from Core.workspace import validate_workspace
+from Core.paths import user_config_path
+from Core.samples import Sample, SampleStore
+from Backend.connection_service import ConnectionInfo, ConnectionService
+from Backend.export_worker import CsvExportWorker
 
 
 def _get_serial_ports() -> List[str]:
@@ -37,16 +41,6 @@ class _GraphBuffer:
     pending_points: List[Tuple[float, float]] = field(default_factory=list)
 
 
-@dataclass
-class ConnectionInfo:
-    """Information about a single connection instance."""
-    connection_id: str  # Unique ID (e.g., "Serial_COM3_1234567890")
-    interface_type: str  # Interface type (Serial, Telnet, MQTT, Test)
-    display_name: str  # User-friendly name
-    status: str  # "disconnected", "connecting", "connected"
-    settings: Dict[str, Any] = field(default_factory=dict)
-    receiver: Optional[Receiver] = None
-    created_at: float = field(default_factory=time.time)
 
 
 class Backend(QObject):
@@ -61,6 +55,7 @@ class Backend(QObject):
     ]
 
     # Settings signals
+    status_message = Signal(str, str)
     new_interface = Signal(str)
     new_settings = Signal("QJSValue")
 
@@ -76,7 +71,7 @@ class Backend(QObject):
     connections_changed = Signal("QVariant")  # Emitted when connection list changes
     connection_status_changed = Signal(str, str, "QVariant")  # (connection_id, status, details)
 
-    def __init__(self) -> None:
+    def __init__(self, config_path: str | Path | None = None) -> None:
         super().__init__()
         if Backend.__backend_instance is not None:
             raise RuntimeError("Backend already initialized")
@@ -105,9 +100,26 @@ class Backend(QObject):
         # Multi-connection management (primary system)
         self.__connections: Dict[str, ConnectionInfo] = {}  # connection_id -> ConnectionInfo
         self.__connection_counter: int = 0  # Counter for generating unique IDs
-        self.__config_path: str = str(
-            Path(__file__).resolve().parents[2] / "config" / "config.json"
-        )
+        self.__config_path = str(Path(config_path) if config_path else user_config_path())
+        self._base_config: dict = {}
+        self._sample_store = SampleStore()
+        self._capture_start: float | None = None
+        self._source_time_origins: dict[str, float] = {}
+        self._last_rx_monotonic: dict[str, float] = {}
+        self._parse_warning_times: dict[str, float] = {}
+        self._received_total = self._invalid_total = self._display_dropped = 0
+        self._display_reduced = self._event_dropped = self._signal_limit_dropped = 0
+        self._max_pending_points = 4096
+        self._display_point_limit = 10000
+        self._display_paused = False
+        self._last_message_flush = 0.0
+        self._export_worker = None
+        self._metrics_time = time.monotonic()
+        self._metrics_received = 0
+        self._connection_service = ConnectionService(
+            self.__receiver_registry, self._on_receiver_data, self._emit_connections_changed,
+            self._emit_connection_status_changed, self._notify_status)
+        self.__connections = self._connection_service.connections
 
         # Chart helpers
         self.__graph_list: Dict[str, _GraphBuffer] = {}
@@ -119,12 +131,14 @@ class Backend(QObject):
         self.__scroll_step = 5
 
         # Performance optimization: Batch updates
-        self._point_buffer: Dict[str, List[Tuple[float, float, float, bool]]] = {}
-        self._point_buffer_3d: Dict[str, List[Tuple[float, float, float]]] = {}
+        self._frames_2d = FrameBuffer(self._max_pending_points)
+        self._frames_3d = FrameBuffer(self._max_pending_points)
+        self._point_buffer = self._frames_2d.queues
+        self._point_buffer_3d = self._frames_3d.queues
         self._batch_timer = QTimer(self)
         self._batch_timer.timeout.connect(self._flush_point_buffer)
-        self._batch_timer.start(50)  # Flush every 50ms (20 Hz batch rate)
-        self._batch_size = 10  # Max points per batch before immediate flush
+        self._batch_timer.start(33)  # Display clock, independent of acquisition rate.
+        self._batch_size = 4096  # Upper bound on points per series/frame.
         self._batch_enabled = True  # Enable batching by default
 
         # Message registry (UI table) - throttle updates to the same batch timer
@@ -257,7 +271,7 @@ class Backend(QObject):
         return False
 
     @Slot(result="bool")
-    def connect(self) -> bool:
+    def connect_selected(self) -> bool:
         """Start the connection selected through the legacy settings API.
 
         Older QML components first assign ``interface`` and then call this
@@ -319,6 +333,13 @@ class Backend(QObject):
             logger.log_error("Backend configuration missing")
             return
 
+        validate_configuration(config)
+        self._base_config = deepcopy(config)
+        performance = config.get("performance", {})
+        self.set_batch_interval(int(performance.get("frame_interval_ms", 33)))
+        self._display_point_limit = max(500, min(50000, int(performance.get("display_points_per_signal", 10000))))
+        self._downsample_enabled = bool(performance.get("downsample_enabled", False))
+        self.set_downsample_target_hz(float(performance.get("downsample_target_hz", 1000.0)))
         self.ui_config = config.get("qml", {})
         self.__interfaces_config = parse_interface_definitions(config.get("interfaces", []))
         self.__scroll_step = config.get("scroll_step", self.__scroll_step)
@@ -552,6 +573,7 @@ class Backend(QObject):
         if data_point is None:
             return
 
+        self._received_total += 1
         # Create unique_id from interface and data ID
         unique_id = f"{interface}_{data_point.id}"
 
@@ -562,6 +584,9 @@ class Backend(QObject):
         # Get or create state for this unique_id
         state = self._graph_state.get(unique_id)
         if state is None:
+            if len(self._graph_state) >= 256:
+                self._signal_limit_dropped += 1
+                return
             # New data source discovered - auto-create line
             conn_info = self.__connections.get(interface)
             interface_type = conn_info.interface_type if conn_info else interface
@@ -608,24 +633,28 @@ class Backend(QObject):
         # Message registry (for UI inspection)
         # ------------------------------------------------------------------
         now = time.time()
+        monotonic_now = time.monotonic()
+        if self._capture_start is None:
+            self._capture_start = monotonic_now
         conn_info = self.__connections.get(interface)
         interface_type = conn_info.interface_type if conn_info else interface
 
         prev = self._message_state.get(unique_id)
-        prev_rx = prev.get("rxTime") if prev else None
-        cycle_time = (now - float(prev_rx)) if prev_rx is not None else None
+        prev_rx = self._last_rx_monotonic.get(unique_id)
+        cycle_time = (monotonic_now - prev_rx) if prev_rx is not None else None
+        self._last_rx_monotonic[unique_id] = monotonic_now
         rx_count = (int(prev.get("rxCount", 0)) + 1) if prev else 1
 
         # Pre-calculate time normalization even if X is present (needed for time-series views)
         t_value = None
         if data_point.timestamp is not None:
-            if state["first_timestamp"] is None:
-                state["first_timestamp"] = data_point.timestamp
-            t_value = float(data_point.timestamp - state["first_timestamp"])
+            origin = self._source_time_origins.setdefault(interface, data_point.timestamp)
+            state["first_timestamp"] = origin
+            t_value = float(data_point.timestamp - origin)
         else:
             if state["first_rx_time"] is None:
                 state["first_rx_time"] = now
-            t_value = float(now - state["first_rx_time"])
+            t_value = float(monotonic_now - self._capture_start)
 
         self._message_state[unique_id] = {
             "uniqueId": unique_id,
@@ -662,12 +691,13 @@ class Backend(QObject):
         # Time-series coordinate: prefer normalized timestamp even if X is present.
         time_value = float(t_value)
 
-        # Apply downsampling if enabled
-        if self._downsample_enabled and not self._should_emit_point(unique_id):
-            return
+        # Retain original values before *any* display-only reduction/overflow.
+        self._sample_store.append(unique_id, Sample(
+            t=time_value, x=data_point.x, y=float(data_point.value), z=data_point.z_value,
+            timestamp=data_point.timestamp, rx_time=now))
 
         # Send point to QML - use batching for better performance
-        if self._batch_enabled:
+        if self._batch_enabled or self._display_paused:
             self._buffer_point(
                 unique_id,
                 x_value,
@@ -690,7 +720,7 @@ class Backend(QObject):
         # 3D charts (XYZ): emit dedicated events when Z is present
         if getattr(data_point, "z_value", None) is not None:
             z_value = float(data_point.z_value)  # type: ignore[arg-type]
-            if self._batch_enabled:
+            if self._batch_enabled or self._display_paused:
                 self._buffer_point_3d(unique_id, x_value, float(data_point.value), z_value)
             else:
                 self._queue_event(
@@ -711,157 +741,16 @@ class Backend(QObject):
         return [tpl.copy() for tpl in self._TEST_SIGNAL_TEMPLATES]
 
     def _parse_data_point(self, interface: str, payload: bytes) -> PlotDataPoint | None:
-        """Parse received payload into a PlotDataPoint.
-
-        Expected formats:
-        1. JSON (time): {"id": 0-255, "value": float, "timestamp": float (optional), "z": float (optional)}
-        2. JSON (XY): {"id": 0-255, "x": float, "y": float} (or "value" instead of "y")
-        3. JSON: {"id": 0-255, "value": float, "z": float (optional)}
-        4. Plain number: float (fallback: id=0, auto-timestamp)
-
-        Args:
-            interface: Name of the interface (for logging)
-            payload: Raw bytes received
-
-        Returns:
-            PlotDataPoint or None if parsing failed
-        """
-        if not payload:
-            return None
-
-        if is_binary_frame(payload):
-            try:
-                return decode_data_frame(payload)
-            except ProtocolError as exc:
+        """Parse without coupling wire validation to Qt; rate-limit error reporting."""
+        try:
+            return parse_payload(payload)
+        except ProtocolError as exc:
+            self._invalid_total += 1
+            now = time.monotonic()
+            if now - self._parse_warning_times.get(interface, -10.0) >= 1.0:
+                self._parse_warning_times[interface] = now
                 self._notify_status("warning", f"{interface}: {exc}")
-                return None
-
-        try:
-            text = payload.decode("utf-8").strip()
-        except UnicodeDecodeError:
-            self._notify_status("warning", f"{interface}: received non-text payload")
             return None
-
-        if not text:
-            return None
-        if text.startswith("#"):
-            # Allow embedded examples to print comment/header lines.
-            return None
-
-        # Try to parse as JSON first
-        try:
-            decoded = json.loads(text)
-        except json.JSONDecodeError:
-            # Fallback: Try as plain number
-            try:
-                value = float(text)
-                if not math.isfinite(value):
-                    raise ValueError
-                # Fallback: id=0, no timestamp (will use auto-increment)
-                return PlotDataPoint(id=0, value=value, timestamp=None)
-            except ValueError:
-                self._notify_status("warning", f"{interface}: cannot parse payload '{text[:40]}...'")
-                return None
-
-        # Handle optional MQTT wrapper: {"topic": "...", "payload_type": "...", "payload": ...}
-        if isinstance(decoded, dict) and "payload" in decoded and "payload_type" in decoded and "topic" in decoded:
-            payload_type = decoded.get("payload_type")
-            inner = decoded.get("payload")
-            if payload_type == "json" and isinstance(inner, dict):
-                decoded = inner
-            elif payload_type == "text" and isinstance(inner, str):
-                inner_text = inner.strip()
-                if inner_text.startswith("#") or not inner_text:
-                    return None
-                try:
-                    decoded = json.loads(inner_text)
-                except json.JSONDecodeError:
-                    try:
-                        value = float(inner_text)
-                        if not math.isfinite(value):
-                            raise ValueError
-                        return PlotDataPoint(id=0, value=value, timestamp=None)
-                    except ValueError:
-                        return None
-
-        # Handle JSON object
-        if isinstance(decoded, dict):
-            # Extract required fields
-            data_id = decoded.get("id")
-            value = decoded.get("value")
-            if value is None:
-                value = decoded.get("y")
-            x_value = decoded.get("x")
-            timestamp = decoded.get("timestamp")
-            z_value = decoded.get("z")
-
-            # Validate ID
-            if data_id is None:
-                self._notify_status("warning", f"{interface}: missing 'id' field in JSON")
-                return None
-            if not isinstance(data_id, int) or not 0 <= data_id <= 255:
-                self._notify_status("warning", f"{interface}: 'id' must be integer 0-255, got {data_id}")
-                return None
-
-            # Validate value
-            if value is None:
-                self._notify_status("warning", f"{interface}: missing 'value'/'y' field in JSON")
-                return None
-            if not isinstance(value, (int, float)):
-                self._notify_status("warning", f"{interface}: 'value' must be numeric, got {type(value)}")
-                return None
-            if not math.isfinite(float(value)):
-                self._notify_status("warning", f"{interface}: 'value' must be finite")
-                return None
-
-            # Validate X (optional)
-            if x_value is not None and not isinstance(x_value, (int, float)):
-                self._notify_status("warning", f"{interface}: 'x' must be numeric or omitted, got {type(x_value)}")
-                return None
-            if x_value is not None and not math.isfinite(float(x_value)):
-                self._notify_status("warning", f"{interface}: 'x' must be finite")
-                return None
-
-            # Validate timestamp (optional)
-            if timestamp is not None and not isinstance(timestamp, (int, float)):
-                self._notify_status("warning", f"{interface}: 'timestamp' must be numeric or omitted, got {type(timestamp)}")
-                return None
-            if timestamp is not None and (
-                not math.isfinite(float(timestamp)) or float(timestamp) < 0
-            ):
-                self._notify_status("warning", f"{interface}: 'timestamp' must be finite and non-negative")
-                return None
-
-            # Validate z_value (optional)
-            if z_value is not None and not isinstance(z_value, (int, float)):
-                self._notify_status("warning", f"{interface}: 'z' must be numeric or omitted, got {type(z_value)}")
-                return None
-
-            try:
-                return PlotDataPoint(
-                    id=data_id,
-                    value=float(value),
-                    x=float(x_value) if x_value is not None else None,
-                    timestamp=float(timestamp) if timestamp is not None else None,
-                    z_value=float(z_value) if z_value is not None else None
-                )
-            except ValueError as e:
-                self._notify_status("warning", f"{interface}: invalid data point: {e}")
-                return None
-            if z_value is not None and not math.isfinite(float(z_value)):
-                self._notify_status("warning", f"{interface}: 'z' must be finite")
-                return None
-
-        # Handle plain number in JSON
-        if isinstance(decoded, (int, float)):
-            value = float(decoded)
-            if math.isfinite(value):
-                return PlotDataPoint(id=0, value=value, timestamp=None)
-            self._notify_status("warning", f"{interface}: numeric payload must be finite")
-            return None
-
-        self._notify_status("warning", f"{interface}: unexpected JSON format")
-        return None
 
     def _color_from_name(self, name: str) -> int:
         """Generate color from name hash (legacy)."""
@@ -897,7 +786,18 @@ class Backend(QObject):
     def _queue_event(self, signal_name: str, *args) -> None:
         if self._emit_event(signal_name, *args):
             return
-        self._pending_events.setdefault(signal_name, []).append(args)
+        events = self._pending_events.setdefault(signal_name, [])
+        # Before QML is ready keep only the most recent batch for each signal.
+        if signal_name.startswith("append_graph") and args:
+            for index, previous in enumerate(events):
+                if previous[0] == args[0]:
+                    self._display_dropped += len(previous[1]) if isinstance(previous[1], list) else 1
+                    events[index] = args
+                    return
+        if len(events) >= 256:
+            events.pop(0)
+            self._event_dropped += 1
+        events.append(args)
 
     def _emit_event(self, signal_name: str, *args) -> bool:
         if self._backend_events is None:
@@ -927,90 +827,57 @@ class Backend(QObject):
         else:
             logger.log_info(message)
 
+        self.status_message.emit(level, message)
         self._queue_event("status_message", level, message)
 
     # ------------------------------------------------------------------ #
     # Batch update methods for performance optimization
     # ------------------------------------------------------------------ #
-    def _buffer_point(
-        self,
-        unique_id: str,
-        x: float,
-        y: float,
-        t: float,
-        has_explicit_x: bool = True,
-    ) -> None:
-        """Buffer a point for batch sending to QML.
-
-        Points are collected and sent in batches to reduce QML/JavaScript overhead.
-        If buffer reaches batch_size, it's flushed immediately.
-        Otherwise, the batch timer will flush it periodically.
-        """
-        if unique_id not in self._point_buffer:
-            self._point_buffer[unique_id] = []
-
-        # Store both coordinate sets and their provenance. Cartesian XY renderers
-        # must not mistake a time fallback for a protocol-supplied X coordinate.
-        self._point_buffer[unique_id].append((x, y, t, has_explicit_x))
-
-        # Flush immediately if buffer is full
-        if len(self._point_buffer[unique_id]) >= self._batch_size:
-            self._flush_points_for_line(unique_id)
+    def _buffer_point(self, unique_id: str, x: float, y: float, t: float,
+                      has_explicit_x: bool = True) -> None:
+        """Never render from the producer; the frame timer is the only batch clock."""
+        before = self._frames_2d.dropped
+        self._frames_2d.append(unique_id, (x, y, t, has_explicit_x))
+        self._display_dropped += self._frames_2d.dropped - before
 
     def _buffer_point_3d(self, unique_id: str, x: float, y: float, z: float) -> None:
-        """Buffer a 3D point for batch sending to QML."""
-        if unique_id not in self._point_buffer_3d:
-            self._point_buffer_3d[unique_id] = []
-
-        self._point_buffer_3d[unique_id].append((x, y, z))
-
-        if len(self._point_buffer_3d[unique_id]) >= self._batch_size:
-            self._flush_points_for_line_3d(unique_id)
+        before = self._frames_3d.dropped
+        self._frames_3d.append(unique_id, (x, y, z))
+        self._display_dropped += self._frames_3d.dropped - before
 
     def _flush_point_buffer(self) -> None:
-        """Timer callback to flush all buffered points + message state."""
-        for unique_id in list(self._point_buffer.keys()):
-            self._flush_points_for_line(unique_id)
-        for unique_id in list(self._point_buffer_3d.keys()):
-            self._flush_points_for_line_3d(unique_id)
-
-        self._flush_message_updates()
+        if not self._display_paused:
+            for key in list(self._point_buffer):
+                self._flush_points_for_line(key)
+            for key in list(self._point_buffer_3d):
+                self._flush_points_for_line_3d(key)
+        now = time.monotonic()
+        if now - self._last_message_flush >= 0.2:
+            self._last_message_flush = now
+            self._flush_message_updates()
 
     def _flush_points_for_line(self, unique_id: str) -> None:
-        """Flush buffered points for a single line to QML."""
-        if unique_id not in self._point_buffer:
-            return
-
-        points = self._point_buffer[unique_id]
+        points = list(self._point_buffer.pop(unique_id, []))
         if not points:
             return
-
-        # Inner Python tuples remain opaque QVariant values in QML on some
-        # PySide versions. Convert them explicitly so JS indexing yields
-        # numeric coordinates rather than undefined/NaN.
-        self._queue_event(
-            "append_graph_points_batch",
-            unique_id,
-            [list(point) for point in points],
-        )
-
-        # Clear buffer
-        self._point_buffer[unique_id] = []
+        batch, remaining = points[:self._batch_size], points[self._batch_size:]
+        if remaining:
+            self._point_buffer[unique_id] = deque(remaining, maxlen=self._max_pending_points)
+        if self._downsample_enabled and all(not p[3] for p in batch):
+            target = max(4, int(self._downsample_target_hz * self._batch_timer.interval() / 1000))
+            reduced = peak_envelope(batch, target)
+            self._display_reduced += len(batch) - len(reduced)
+            batch = reduced
+        self._queue_event("append_graph_points_batch", unique_id, [list(p) for p in batch])
 
     def _flush_points_for_line_3d(self, unique_id: str) -> None:
-        if unique_id not in self._point_buffer_3d:
-            return
-
-        points = self._point_buffer_3d[unique_id]
+        points = list(self._point_buffer_3d.pop(unique_id, []))
         if not points:
             return
-
-        self._queue_event(
-            "append_graph_points_batch_3d",
-            unique_id,
-            [list(point) for point in points],
-        )
-        self._point_buffer_3d[unique_id] = []
+        batch, remaining = points[:self._batch_size], points[self._batch_size:]
+        if remaining:
+            self._point_buffer_3d[unique_id] = deque(remaining, maxlen=self._max_pending_points)
+        self._queue_event("append_graph_points_batch_3d", unique_id, [list(p) for p in batch])
 
     def _flush_message_updates(self) -> None:
         if not self._dirty_messages:
@@ -1041,27 +908,12 @@ class Backend(QObject):
 
     @Slot(int)
     def set_batch_size(self, size: int) -> None:
-        """Set maximum batch size before immediate flush.
-
-        Args:
-            size: Number of points to buffer before flushing (default: 10)
-        """
-        if size < 1:
-            size = 1
-        self._batch_size = size
-        logger.log_info(f"Batch size set to {size}")
+        """Maximum points delivered per signal/frame; never an immediate-flush trigger."""
+        self._batch_size = max(64, min(4096, size))
 
     @Slot(int)
     def set_batch_interval(self, interval_ms: int) -> None:
-        """Set batch flush interval in milliseconds.
-
-        Args:
-            interval_ms: Milliseconds between batch flushes (default: 50ms = 20 Hz)
-        """
-        if interval_ms < 10:
-            interval_ms = 10
-        self._batch_timer.setInterval(interval_ms)
-        logger.log_info(f"Batch interval set to {interval_ms}ms")
+        self._batch_timer.setInterval(max(16, min(500, interval_ms)))
 
     @Slot(bool)
     def set_auto_scroll_enabled(self, enabled: bool) -> None:
@@ -1096,17 +948,8 @@ class Backend(QObject):
 
     @Slot(float)
     def set_downsample_target_hz(self, hz: float) -> None:
-        """Set target display rate for downsampling.
-
-        Args:
-            hz: Target frequency in Hz (default: 50 Hz)
-        """
-        if hz < 1:
-            hz = 1
-        if hz > 1000:
-            hz = 1000
-        self._downsample_target_hz = hz
-        logger.log_info(f"Downsample target set to {hz} Hz")
+        if math.isfinite(hz):
+            self._downsample_target_hz = max(10.0, min(100000.0, hz))
 
     def _should_emit_point(self, unique_id: str) -> bool:
         """Check if enough time has passed to emit a new point (rate limiting).
@@ -1219,246 +1062,112 @@ class Backend(QObject):
 
     @Slot(str, result=bool)
     def load_configuration_from_file(self, file_url: str) -> bool:
-        """Import, persist, and immediately apply a selected configuration."""
+        """Validate first. Never replace/delete a receiver that failed to stop."""
         try:
-            source = self._path_from_file_url(file_url)
-            with source.open("r", encoding="utf-8") as config_file:
-                config = json.load(config_file)
-            self._validate_configuration(config)
-
-            # Persist first. If this fails, the running state remains untouched.
-            self._write_json_atomic(Path(self.__config_path), config)
+            if self._export_worker is not None:
+                raise ValueError("Finish the CSV export before changing configuration")
+            source = local_path(file_url)
+            if source.stat().st_size > MAX_CONFIGURATION_BYTES:
+                raise ValueError("Configuration exceeds 4 MiB")
+            with source.open(encoding="utf-8-sig") as stream:
+                config = json.load(stream)
+            validate_configuration(config)
+            # Confirm all transport constructors accept their persisted values
+            # before any running source or on-disk configuration is touched.
+            probes = []
+            try:
+                for entry in config.get("saved_connections", []):
+                    receiver = self.__receiver_registry.create_receiver(
+                        {"type": entry["type"], "default": entry.get("settings", {})})
+                    if receiver is None:
+                        raise ValueError("Unsupported transport: " + entry["type"])
+                    probes.append(receiver)
+            finally:
+                for receiver in probes:
+                    receiver.deleteLater()
+            if not self._connection_service.shutdown():
+                raise ValueError("At least one connection could not stop; import cancelled")
+            atomic_json_write(Path(self.__config_path), config)
             self._clear_runtime_state_for_configuration_reload()
             self.config(config)
-            self._notify_status("success", f"Configuration loaded from {source.name}")
-            logger.log_info("Configuration imported from %s", source)
+            self._notify_status("success", f"Configuration loaded from {source.name}; connections remain stopped")
             return True
-        except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
-            logger.log_error("Failed to import configuration: %s", exc)
-            self._notify_status("error", f"Could not load configuration: {exc}")
+        except (OSError, TypeError, ValueError, OverflowError, RecursionError) as exc:
+            self._notify_status("error", f"Configuration not applied: {exc}")
             return False
 
     @staticmethod
     def _path_from_file_url(file_url: str) -> Path:
-        """Convert a QML FileDialog URL (or a normal path) into a local path."""
-        value = str(file_url).strip()
-        if not value:
-            raise ValueError("No file selected")
-
-        # A Windows drive path is parsed as a URL scheme by urlparse.
-        if len(value) >= 3 and value[1] == ":" and value[2] in ("/", "\\"):
-            return Path(value)
-
-        parsed = urlparse(value)
-        if parsed.scheme not in ("", "file"):
-            raise ValueError(f"Unsupported URL scheme: {parsed.scheme}")
-        if not parsed.scheme:
-            return Path(unquote(value))
-
-        path = unquote(parsed.path)
-        if parsed.netloc:
-            path = f"//{parsed.netloc}{path}"
-        elif os.name == "nt" and len(path) >= 3 and path[0] == "/" and path[2] == ":":
-            path = path[1:]
-        return Path(path)
+        return local_path(file_url)
 
     def _configuration_snapshot(self) -> Dict[str, Any]:
-        """Build a JSON-serializable snapshot from the current backend state."""
-        config_path = Path(self.__config_path)
-        if config_path.exists():
-            with config_path.open("r", encoding="utf-8") as config_file:
-                config = json.load(config_file)
-            if not isinstance(config, dict):
-                raise ValueError("The current configuration root must be an object")
-        else:
-            config = {}
-
-        snapshot = deepcopy(config)
-        existing_interfaces = {
-            item.get("type"): deepcopy(item)
-            for item in snapshot.get("interfaces", [])
-            if isinstance(item, dict) and item.get("type")
-        }
-        snapshot["interfaces"] = []
-        for interface_type, definition in self.__interfaces_config.items():
-            interface_config = existing_interfaces.get(interface_type, {"type": interface_type})
-            interface_config["default"] = deepcopy(
-                self.__default_templates.get(interface_type, definition.defaults)
-            )
-            snapshot["interfaces"].append(interface_config)
-
-        snapshot["saved_connections"] = [
-            {
-                "id": connection_id,
-                "type": info.interface_type,
-                "name": info.display_name,
-                "settings": deepcopy(info.settings),
-                "created_at": info.created_at,
-            }
-            for connection_id, info in sorted(
-                self.__connections.items(), key=lambda item: item[1].created_at
-            )
+        """Merge runtime state into an isolated copy of the loaded configuration."""
+        snapshot = deepcopy(self._base_config)
+        snapshot["interfaces"] = [
+            {"type": name, "default": deepcopy(self.__default_templates.get(name, definition.defaults))}
+            for name, definition in self.__interfaces_config.items()
         ]
+        snapshot["saved_connections"] = [
+            {"id": info.connection_id, "type": info.interface_type, "name": info.display_name,
+             "settings": deepcopy(info.settings), "created_at": info.created_at}
+            for info in self.__connections.values()
+        ]
+        snapshot["performance"] = {
+            "frame_interval_ms": self._batch_timer.interval(),
+            "display_points_per_signal": self._display_point_limit,
+            "downsample_enabled": self._downsample_enabled,
+            "downsample_target_hz": self._downsample_target_hz,
+        }
         return snapshot
 
     @staticmethod
     def _validate_configuration(config: Any) -> None:
-        if not isinstance(config, dict):
-            raise ValueError("Configuration root must be an object")
-
-        interfaces = config.get("interfaces")
-        if not isinstance(interfaces, list) or not interfaces:
-            raise ValueError("Configuration must contain at least one interface")
-
-        interface_types: set[str] = set()
-        for item in interfaces:
-            if not isinstance(item, dict):
-                raise ValueError("Every interface entry must be an object")
-            interface_type = item.get("type")
-            defaults = item.get("default", {})
-            if not isinstance(interface_type, str) or not interface_type.strip():
-                raise ValueError("Every interface requires a type")
-            if interface_type in interface_types:
-                raise ValueError(f"Duplicate interface type: {interface_type}")
-            if not isinstance(defaults, dict):
-                raise ValueError(f"Defaults for {interface_type} must be an object")
-            interface_types.add(interface_type)
-
-        saved_connections = config.get("saved_connections", [])
-        if not isinstance(saved_connections, list):
-            raise ValueError("saved_connections must be an array")
-        connection_ids: set[str] = set()
-        for connection in saved_connections:
-            if not isinstance(connection, dict):
-                raise ValueError("Every saved connection must be an object")
-            connection_id = connection.get("id")
-            interface_type = connection.get("type")
-            display_name = connection.get("name")
-            settings = connection.get("settings", {})
-            if not all(isinstance(value, str) and value for value in (
-                connection_id,
-                interface_type,
-                display_name,
-            )):
-                raise ValueError("Saved connections require id, type, and name")
-            if connection_id in connection_ids:
-                raise ValueError(f"Duplicate connection id: {connection_id}")
-            if interface_type not in interface_types:
-                raise ValueError(
-                    f"Connection {connection_id} references unknown interface {interface_type}"
-                )
-            if not isinstance(settings, dict):
-                raise ValueError(f"Settings for {connection_id} must be an object")
-            connection_ids.add(connection_id)
+        validate_configuration(config)
 
     @staticmethod
     def _write_json_atomic(target: Path, config: Dict[str, Any]) -> None:
-        target = target.resolve()
-        target.parent.mkdir(parents=True, exist_ok=True)
-        temp_name: str | None = None
-        try:
-            with tempfile.NamedTemporaryFile(
-                "w",
-                encoding="utf-8",
-                dir=target.parent,
-                prefix=f".{target.name}.",
-                suffix=".tmp",
-                delete=False,
-            ) as temp_file:
-                temp_name = temp_file.name
-                json.dump(config, temp_file, indent=2)
-                temp_file.write("\n")
-            os.replace(temp_name, target)
-            temp_name = None
-        finally:
-            if temp_name:
-                try:
-                    Path(temp_name).unlink()
-                except FileNotFoundError:
-                    pass
+        atomic_json_write(target, config)
 
     def _clear_runtime_state_for_configuration_reload(self) -> None:
-        removed_signal_ids = set(self._graph_state)
-        removed_signal_ids.update(self.__graph_list)
-        removed_signal_ids.update(self._point_buffer)
-        removed_signal_ids.update(self._point_buffer_3d)
-        removed_signal_ids.update(self._last_emit_time)
-        removed_signal_ids.update(self._message_state)
-        removed_signal_ids.update(self._chart_line_overrides)
-        removed_signal_ids.update(self._dirty_messages)
-        removed_signal_ids.update(self._ignored_signals)
-
-        for connection in self.__connections.values():
-            if connection.receiver is None:
-                continue
-            try:
-                connection.receiver.stop()
-            except Exception as exc:
-                logger.log_warning(
-                    "Could not stop connection %s during config import: %s",
-                    connection.connection_id,
-                    exc,
-                )
-
+        removed_signal_ids = set(self._graph_state) | set(self._chart_line_overrides)
+        for info in self.__connections.values():
+            if info.receiver is not None:
+                info.receiver.deleteLater()
         self.__connections.clear()
+        self._connection_service._requested.clear()
         self.__connection_counter = 0
         self._graph_state.clear()
         self.__graph_list.clear()
-        self._point_buffer.clear()
-        self._point_buffer_3d.clear()
         self._last_emit_time.clear()
-        self._message_state.clear()
         self._chart_line_overrides.clear()
-        self._dirty_messages.clear()
         self._ignored_signals.clear()
         self._pending_events.clear()
+        self.clear_measurements()
         if removed_signal_ids:
             self._queue_event("signals_removed", sorted(removed_signal_ids))
 
-    @Slot(str, "QVariant", result="bool")
+    @Slot(str, "QVariant", result=bool)
     def save_preset(self, file_url: str, preset: Dict[str, Any]) -> bool:
-        """Save settings preset to a JSON file."""
         try:
-            import json
-            from urllib.parse import urlparse
-
-            # Convert file URL to path
-            parsed = urlparse(file_url)
-            file_path = parsed.path
-            if file_path.startswith('/') and len(file_path) > 2 and file_path[2] == ':':
-                file_path = file_path[1:]
-
-            with open(file_path, 'w') as f:
-                json.dump(preset, f, indent=2)
-
-            logger.log_info(f"Preset saved to {file_path}")
+            atomic_json_write(local_path(file_url), self._settings_dict(preset))
             return True
-
-        except Exception as e:
-            logger.log_error(f"Failed to save preset: {e}")
+        except (OSError, TypeError, ValueError) as exc:
+            self._notify_status("error", f"Preset not saved: {exc}")
             return False
 
     @Slot(str, result="QVariant")
     def load_preset(self, file_url: str) -> Dict[str, Any]:
-        """Load settings preset from a JSON file."""
         try:
-            import json
-            from urllib.parse import urlparse
-
-            # Convert file URL to path
-            parsed = urlparse(file_url)
-            file_path = parsed.path
-            if file_path.startswith('/') and len(file_path) > 2 and file_path[2] == ':':
-                file_path = file_path[1:]
-
-            with open(file_path, 'r') as f:
-                preset = json.load(f)
-
-            logger.log_info(f"Preset loaded from {file_path}")
-            return preset
-
-        except Exception as e:
-            logger.log_error(f"Failed to load preset: {e}")
+            path = local_path(file_url)
+            if path.stat().st_size > MAX_CONFIGURATION_BYTES:
+                raise ValueError("Preset exceeds 4 MiB")
+            with path.open(encoding="utf-8-sig") as stream:
+                value = json.load(stream)
+            if not isinstance(value, dict):
+                raise ValueError("Preset root must be an object")
+            return value
+        except (OSError, TypeError, ValueError, RecursionError) as exc:
+            self._notify_status("error", f"Preset not loaded: {exc}")
             return {}
 
     # ------------------------------------------------------------------ #
@@ -1466,308 +1175,78 @@ class Backend(QObject):
     # ------------------------------------------------------------------ #
     @Slot(str, str, "QJSValue", result=str)
     def create_connection(self, interface_type: str, display_name: str, settings: QJSValue) -> str:
-        """Create a new connection instance.
-
-        Args:
-            interface_type: Type of interface (Serial, Telnet, MQTT, Test)
-            display_name: User-friendly name for the connection
-            settings: Initial settings as QJSValue
-
-        Returns:
-            connection_id: Unique ID for the created connection, or empty string on error
-        """
-        # Validate interface type
         if interface_type not in self.__interfaces_config:
             self._notify_status("error", f"Unknown interface type: {interface_type}")
             return ""
-
-        # Generate unique connection ID
-        self.__connection_counter += 1
-        timestamp = int(time.time() * 1000)
-        connection_id = f"{interface_type}_{timestamp}_{self.__connection_counter}"
-
-        # Convert settings first to generate better display name
-        py_settings = Converter.jsvalue_to_dict(settings) if settings.isObject() else {}
-
-        # Auto-generate display name if empty
-        if not display_name or display_name.strip() == "":
-            display_name = self._generate_display_name(interface_type, py_settings)
-
-        # Create receiver instance
-        interface_config = self.__interfaces_config[interface_type]
-        receiver = self.__receiver_registry.create_receiver({
-            "type": interface_config.type,
-            "default": interface_config.defaults
-        })
-        if receiver is None:
-            self._notify_status("error", f"Failed to create receiver for {interface_type}")
+        try:
+            merged = deepcopy(self.__default_templates.get(interface_type, {}))
+            merged.update(self._settings_dict(settings))
+        except (TypeError, ValueError) as exc:
+            self._notify_status("error", str(exc))
             return ""
-
-        # Configure receiver with settings or defaults
-        if py_settings:
-            receiver.config(py_settings)
-        else:
-            # Use default settings from config
-            default_settings = interface_config.defaults
-            if default_settings:
-                receiver.config(default_settings)
-
-        # Connect receiver signals
-        receiver.new_data.connect(partial(self._on_receiver_data, connection_id))
-
-        # Create connection info
-        conn_info = ConnectionInfo(
-            connection_id=connection_id,
-            interface_type=interface_type,
-            display_name=display_name,
-            status="disconnected",
-            settings=py_settings if py_settings else interface_config.defaults,
-            receiver=receiver
-        )
-
-        self.__connections[connection_id] = conn_info
-        logger.log_info(f"Created connection: {connection_id} ({display_name})")
-
-        # Emit signal and save
-        self._emit_connections_changed()
-        self._save_connections_to_config()
-
-        return connection_id
+        name = display_name.strip() or self._generate_display_name(interface_type, merged)
+        key = self._connection_service.create(interface_type, name, merged)
+        if key:
+            self._save_connections_to_config()
+        return key
 
     @Slot(str, result=bool)
     def start_connection(self, connection_id: str) -> bool:
-        """Start a specific connection.
-
-        Args:
-            connection_id: Unique ID of the connection to start
-
-        Returns:
-            True if started successfully, False otherwise
-        """
-        conn_info = self.__connections.get(connection_id)
-        if conn_info is None:
-            self._notify_status("error", f"Connection not found: {connection_id}")
-            return False
-
-        if conn_info.status == "connected":
-            self._notify_status("warning", f"Connection already active: {connection_id}")
-            return True
-
-        # Update status to connecting
-        conn_info.status = "connecting"
-        self._emit_connection_status_changed(connection_id, "connecting", {})
-
-        try:
-            conn_info.receiver.start()
-            conn_info.status = "connected"
-            self._notify_status("info", f"Connection started: {conn_info.display_name}")
-            self._emit_connection_status_changed(connection_id, "connected", {})
-            self._emit_connections_changed()
-            return True
-
-        except ValueError as exc:
-            conn_info.status = "disconnected"
-            error_msg = f"Invalid settings for {conn_info.display_name}: {exc}"
-            self._notify_status("warning", error_msg)
-            self._emit_connection_status_changed(connection_id, "disconnected", {"error": str(exc)})
-            self._emit_connections_changed()
-            return False
-
-        except ConnectionError as exc:
-            conn_info.status = "disconnected"
-            error_msg = f"Failed to connect {conn_info.display_name}: {exc}"
-            self._notify_status("error", error_msg)
-            self._emit_connection_status_changed(connection_id, "disconnected", {"error": str(exc)})
-            self._emit_connections_changed()
-            return False
+        return self._connection_service.start(connection_id)
 
     @Slot(str, result=bool)
     def stop_connection(self, connection_id: str) -> bool:
-        """Stop a specific connection.
-
-        Args:
-            connection_id: Unique ID of the connection to stop
-
-        Returns:
-            True if stopped successfully, False otherwise
-        """
-        conn_info = self.__connections.get(connection_id)
-        if conn_info is None:
-            self._notify_status("error", f"Connection not found: {connection_id}")
-            return False
-
-        if conn_info.status == "disconnected":
-            self._notify_status("warning", f"Connection already stopped: {connection_id}")
-            return True
-
-        try:
-            conn_info.receiver.stop()
-            conn_info.status = "disconnected"
-            self._notify_status("info", f"Connection stopped: {conn_info.display_name}")
-            self._emit_connection_status_changed(connection_id, "disconnected", {})
-            self._emit_connections_changed()
-            return True
-
-        except Exception as exc:
-            error_msg = f"Error stopping {conn_info.display_name}: {exc}"
-            self._notify_status("error", error_msg)
-            return False
+        return self._connection_service.stop(connection_id)
 
     @Slot(str, result=bool)
     def delete_connection(self, connection_id: str) -> bool:
-        """Delete a connection (only if disconnected).
-
-        Args:
-            connection_id: Unique ID of the connection to delete
-
-        Returns:
-            True if deleted successfully, False otherwise
-        """
-        conn_info = self.__connections.get(connection_id)
-        if conn_info is None:
-            self._notify_status("error", f"Connection not found: {connection_id}")
+        if connection_id not in self.__connections:
             return False
-
-        if conn_info.status != "disconnected":
-            self._notify_status("error", f"Cannot delete active connection: {conn_info.display_name}")
-            return False
-
-        # Clean up every discovered-signal cache for this connection before
-        # notifying QML. Pending events must be scrubbed as well, otherwise a
-        # queued newGraph/message update can recreate a deleted signal.
-        prefix = f"{connection_id}_"
-        removed_signal_ids = {
-            unique_id
-            for state in (
-                self._graph_state,
-                self.__graph_list,
-                self._point_buffer,
-                self._point_buffer_3d,
-                self._last_emit_time,
-                self._message_state,
-                self._chart_line_overrides,
-            )
-            for unique_id in state
-            if unique_id.startswith(prefix)
-        }
-        removed_signal_ids.update(
-            unique_id
-            for unique_id in self._dirty_messages | self._ignored_signals
-            if unique_id.startswith(prefix)
-        )
-        for pending in self._pending_events.values():
-            for args in pending:
-                first_arg = args[0] if args else None
-                pending_unique_id = (
-                    first_arg.get("uniqueId")
-                    if isinstance(first_arg, dict)
-                    else first_arg
-                )
-                if isinstance(pending_unique_id, str) and pending_unique_id.startswith(prefix):
-                    removed_signal_ids.add(pending_unique_id)
-
-        for unique_id in removed_signal_ids:
-            self._graph_state.pop(unique_id, None)
-            self.__graph_list.pop(unique_id, None)
-            self._point_buffer.pop(unique_id, None)
-            self._point_buffer_3d.pop(unique_id, None)
-            self._last_emit_time.pop(unique_id, None)
-            self._message_state.pop(unique_id, None)
-            self._chart_line_overrides.pop(unique_id, None)
-            self._dirty_messages.discard(unique_id)
-            self._ignored_signals.discard(unique_id)
-
-        for signal_name, pending in list(self._pending_events.items()):
-            if signal_name == "signals_removed":
-                continue
-            retained = []
-            for args in pending:
-                first_arg = args[0] if args else None
-                event_unique_id = (
-                    first_arg.get("uniqueId")
-                    if isinstance(first_arg, dict)
-                    else first_arg
-                )
-                if event_unique_id not in removed_signal_ids:
-                    retained.append(args)
-            if retained:
-                self._pending_events[signal_name] = retained
-            else:
-                self._pending_events.pop(signal_name, None)
-
-        if removed_signal_ids:
-            self._queue_event("signals_removed", sorted(removed_signal_ids))
-
-        # Remove connection
-        del self.__connections[connection_id]
-        logger.log_info(f"Deleted connection: {connection_id} ({conn_info.display_name})")
-
-        # Emit signal and save
+        if not self._connection_service.stop(connection_id):
+            return False  # Never destroy a receiver whose worker still owns resources.
+        info = self.__connections.pop(connection_id)
+        if info.receiver is not None and hasattr(info.receiver, "deleteLater"):
+            info.receiver.deleteLater()
+        prefix = connection_id + "_"
+        mappings = (self._graph_state, self.__graph_list, self._point_buffer,
+                    self._point_buffer_3d, self._last_emit_time, self._message_state,
+                    self._chart_line_overrides, self._last_rx_monotonic)
+        removed = {key for state in mappings for key in state if key.startswith(prefix)}
+        removed.update(key for key in self._ignored_signals if key.startswith(prefix))
+        for state in mappings:
+            for key in removed:
+                state.pop(key, None)
+        for key in removed:
+            self._sample_store.remove(key)
+        self._dirty_messages.difference_update(removed)
+        self._ignored_signals.difference_update(removed)
+        self._source_time_origins.pop(connection_id, None)
+        for event_name, events in list(self._pending_events.items()):
+            self._pending_events[event_name] = [args for args in events
+                if not (args and isinstance(args[0], str) and args[0] in removed)]
+        if removed:
+            self._queue_event("signals_removed", sorted(removed))
         self._emit_connections_changed()
         self._save_connections_to_config()
-
         return True
 
     @Slot(str, "QJSValue", result=bool)
     def update_connection_settings(self, connection_id: str, settings: QJSValue) -> bool:
-        """Update settings for a specific connection.
-
-        Args:
-            connection_id: Unique ID of the connection
-            settings: New settings as QJSValue
-
-        Returns:
-            True if updated successfully, False otherwise
-        """
-        conn_info = self.__connections.get(connection_id)
-        if conn_info is None:
-            self._notify_status("error", f"Connection not found: {connection_id}")
+        try:
+            values = self._settings_dict(settings)
+        except (TypeError, ValueError) as exc:
+            self._notify_status("warning", str(exc))
             return False
-
-        py_settings = Converter.jsvalue_to_dict(settings)
-        if not isinstance(py_settings, dict):
-            self._notify_status("warning", f"Invalid settings format for {connection_id}")
+        if not self._connection_service.update_settings(connection_id, values):
             return False
-
-        # Update settings
-        conn_info.settings = py_settings
-        conn_info.receiver.config(py_settings)
-
-        logger.log_info(f"Updated settings for connection: {connection_id}")
-        self._notify_status("info", f"Settings updated for {conn_info.display_name}")
-
-        # Save to config
         self._save_connections_to_config()
-
         return True
 
     @Slot(str, str, result=bool)
     def rename_connection(self, connection_id: str, new_name: str) -> bool:
-        """Rename a connection.
-
-        Args:
-            connection_id: Unique ID of the connection
-            new_name: New display name
-
-        Returns:
-            True if renamed successfully, False otherwise
-        """
-        conn_info = self.__connections.get(connection_id)
-        if conn_info is None:
-            self._notify_status("error", f"Connection not found: {connection_id}")
+        if not self._connection_service.rename(connection_id, new_name):
             return False
-
-        if not new_name or new_name.strip() == "":
-            self._notify_status("warning", "Connection name cannot be empty")
-            return False
-
-        old_name = conn_info.display_name
-        conn_info.display_name = new_name.strip()
-        logger.log_info(f"Renamed connection {connection_id}: '{old_name}' -> '{new_name}'")
-
-        self._emit_connections_changed()
         self._save_connections_to_config()
-
         return True
 
     @Slot(result="QVariant")
@@ -1807,7 +1286,7 @@ class Backend(QObject):
                 "type": conn_info.interface_type,
                 "name": conn_info.display_name,
                 "status": conn_info.status,
-                "settings": conn_info.settings,
+                "settings": deepcopy(conn_info.settings),
                 "created_at": conn_info.created_at
             })
 
@@ -1835,7 +1314,7 @@ class Backend(QObject):
             "type": conn_info.interface_type,
             "name": conn_info.display_name,
             "status": conn_info.status,
-            "settings": conn_info.settings,
+            "settings": deepcopy(conn_info.settings),
             "created_at": conn_info.created_at
         }
 
@@ -1889,156 +1368,186 @@ class Backend(QObject):
             return f"{interface_type} #{self.__connection_counter}"
 
     def _save_templates_to_config(self) -> bool:
-        """Save default templates to config.json.
-
-        Returns:
-            True if saved successfully, False otherwise
-        """
-        try:
-            # Read current config
-            with open(self.__config_path, 'r') as f:
-                config = json.load(f)
-
-            # Update interface defaults with current templates
-            for iface_conf in config.get("interfaces", []):
-                interface_type = iface_conf.get("type")
-                if interface_type in self.__default_templates:
-                    iface_conf["default"] = self.__default_templates[interface_type]
-                    logger.log_debug(f"Updated default template for {interface_type}")
-
-            # Write back to file
-            with open(self.__config_path, 'w') as f:
-                json.dump(config, f, indent=2)
-
-            logger.log_info("Default templates saved to config.json")
-            return True
-
-        except Exception as e:
-            logger.log_error(f"Failed to save templates to config: {e}")
-            return False
+        return self._persist_configuration()
 
     def _save_connections_to_config(self) -> bool:
-        """Save all connections to config.json for persistence.
-
-        Returns:
-            True if saved successfully, False otherwise
-        """
-        try:
-            # Read current config
-            with open(self.__config_path, 'r') as f:
-                config = json.load(f)
-
-            # Serialize connections (only save disconnected ones to avoid auto-connecting on startup)
-            saved_connections = []
-            for conn_id, conn_info in self.__connections.items():
-                saved_connections.append({
-                    "id": conn_id,
-                    "type": conn_info.interface_type,
-                    "name": conn_info.display_name,
-                    "settings": conn_info.settings,
-                    "created_at": conn_info.created_at
-                })
-
-            # Update config
-            config["saved_connections"] = saved_connections
-
-            # Write back to file
-            with open(self.__config_path, 'w') as f:
-                json.dump(config, f, indent=2)
-
-            logger.log_debug(f"Saved {len(saved_connections)} connections to config")
-            return True
-
-        except Exception as e:
-            logger.log_error(f"Failed to save connections to config: {e}")
-            return False
+        return self._persist_configuration()
 
     def _load_connections_from_config(self) -> None:
-        """Load saved connections from config.json on startup."""
+        """Restore the supplied configuration, never a second hidden file."""
+        for entry in self._base_config.get("saved_connections", []):
+            if entry.get("type") not in self.__interfaces_config:
+                self._notify_status("warning", f"Unknown saved interface: {entry.get('type')}")
+                continue
+            self._connection_service.restore(entry)
+        self._emit_connections_changed()
+
+    @staticmethod
+    def _settings_dict(value: Any) -> dict:
+        if isinstance(value, QJSValue):
+            value = value.toVariant()
+        if value is None:
+            return {}
+        if not isinstance(value, dict):
+            raise ValueError("Settings must be an object")
+        return deepcopy(value)
+
+    def _persist_configuration(self) -> bool:
         try:
-            with open(self.__config_path, 'r') as f:
-                config = json.load(f)
+            config = self._configuration_snapshot()
+            validate_configuration(config)
+            atomic_json_write(Path(self.__config_path), config)
+            self._base_config = deepcopy(config)
+            return True
+        except (OSError, TypeError, ValueError) as exc:
+            self._notify_status("error", f"Could not save configuration: {exc}")
+            return False
 
-            saved_connections = config.get("saved_connections", [])
-            if not saved_connections:
-                logger.log_info("No saved connections found in config")
-                return
+    @Slot(bool)
+    def set_display_paused(self, paused: bool) -> None:
+        """Freeze rendering, not acquisition; bounded pending data resumes later."""
+        self._display_paused = paused
+        if not paused:
+            self._flush_point_buffer()
 
-            logger.log_info(f"Loading {len(saved_connections)} saved connections...")
+    @Slot(int)
+    def set_display_point_limit(self, limit: int) -> None:
+        self._display_point_limit = max(500, min(50000, limit))
 
-            for conn_data in saved_connections:
-                try:
-                    # Extract connection data
-                    conn_id = conn_data.get("id")
-                    interface_type = conn_data.get("type")
-                    display_name = conn_data.get("name")
-                    settings = conn_data.get("settings", {})
-                    created_at = conn_data.get("created_at", time.time())
+    @Slot(result="QVariant")
+    def get_performance_settings(self) -> dict:
+        return {"frame_interval_ms": self._batch_timer.interval(),
+                "display_points_per_signal": self._display_point_limit,
+                "downsample_enabled": self._downsample_enabled,
+                "downsample_target_hz": self._downsample_target_hz}
 
-                    # Validate
-                    if not conn_id or not interface_type or not display_name:
-                        logger.log_warning(f"Skipping invalid connection entry: {conn_data}")
-                        continue
+    @Slot(result="QVariant")
+    def get_diagnostics(self) -> dict:
+        now = time.monotonic()
+        elapsed = max(0.001, now - self._metrics_time)
+        rate = (self._received_total - self._metrics_received) / elapsed
+        self._metrics_time, self._metrics_received = now, self._received_total
+        ingress_dropped = sum(getattr(info.receiver, "dropped_payloads", 0)
+                              for info in self.__connections.values())
+        return {"received": self._received_total, "invalid": self._invalid_total,
+                "rate": rate, "signals": len(self._graph_state),
+                "retained": self._sample_store.total_count, "evicted": self._sample_store.evicted,
+                "displayDropped": self._display_dropped, "displayReduced": self._display_reduced,
+                "ingressDropped": ingress_dropped, "eventDropped": self._event_dropped,
+                "signalLimitDropped": self._signal_limit_dropped,
+                "paused": self._display_paused, "exporting": self._export_worker is not None,
+                "configPath": self.__config_path}
 
-                    if interface_type not in self.__interfaces_config:
-                        logger.log_warning(f"Skipping connection with unknown interface: {interface_type}")
-                        continue
+    @Slot(str, result="QVariant")
+    def get_signal_statistics(self, unique_id: str) -> dict:
+        return self._sample_store.statistics(unique_id)
 
-                    # Create receiver
-                    interface_config = self.__interfaces_config[interface_type]
-                    receiver = self.__receiver_registry.create_receiver({
-                        "type": interface_config.type,
-                        "default": interface_config.defaults
-                    })
-                    if receiver is None:
-                        logger.log_warning(f"Failed to create receiver for saved connection: {conn_id}")
-                        continue
+    @Slot(str, str, result=bool)
+    def export_samples(self, file_url: str, unique_id: str = "") -> bool:
+        if self._export_worker is not None:
+            self._notify_status("warning", "A CSV export is already running")
+            return False
+        try:
+            path = local_path(file_url)
+            rows = self._sample_store.snapshot(unique_id)
+            if not rows:
+                raise ValueError("No retained measurements to export")
+            names = {key: value.get("display_name", key) for key, value in self._graph_state.items()}
+            worker = CsvExportWorker(path, rows, names, self)
+            self._export_worker = worker
+            worker.completed.connect(self._export_completed)
+            worker.failed.connect(self._export_failed)
+            worker.finished.connect(self._export_cleanup)
+            worker.start()
+            return True
+        except (OSError, ValueError) as exc:
+            self._notify_status("error", str(exc))
+            return False
 
-                    # Configure receiver
-                    if settings:
-                        receiver.config(settings)
-                    else:
-                        default_settings = interface_config.defaults
-                        if default_settings:
-                            receiver.config(default_settings)
+    @Slot(str, int)
+    def _export_completed(self, path: str, count: int) -> None:
+        self._notify_status("success", f"CSV: {count} retained measurements saved to {path}")
 
-                    # Connect receiver signals
-                    receiver.new_data.connect(partial(self._on_receiver_data, conn_id))
+    @Slot(str)
+    def _export_failed(self, message: str) -> None:
+        self._notify_status("error", f"CSV export failed: {message}")
 
-                    # Create connection info
-                    conn_info = ConnectionInfo(
-                        connection_id=conn_id,
-                        interface_type=interface_type,
-                        display_name=display_name,
-                        status="disconnected",
-                        settings=settings,
-                        receiver=receiver,
-                        created_at=created_at
-                    )
+    @Slot()
+    def _export_cleanup(self) -> None:
+        if self._export_worker is not None:
+            self._export_worker.deleteLater()
+        self._export_worker = None
 
-                    self.__connections[conn_id] = conn_info
-                    logger.log_info(f"Restored connection: {conn_id} ({display_name})")
+    @Slot()
+    def clear_measurements(self) -> None:
+        self._sample_store.clear()
+        self._point_buffer.clear()
+        self._point_buffer_3d.clear()
+        self._message_state.clear()
+        self._dirty_messages.clear()
+        self._source_time_origins.clear()
+        self._last_rx_monotonic.clear()
+        self._capture_start = None
+        self._received_total = self._invalid_total = self._display_dropped = 0
+        self._display_reduced = self._event_dropped = self._signal_limit_dropped = 0
+        self._metrics_received = 0
+        self._metrics_time = time.monotonic()
 
-                    # Update connection counter to avoid ID collisions
-                    if "_" in conn_id:
-                        try:
-                            parts = conn_id.split("_")
-                            if len(parts) >= 3:
-                                counter = int(parts[-1])
-                                self.__connection_counter = max(self.__connection_counter, counter)
-                        except (ValueError, IndexError):
-                            pass
+    @Slot(result=bool)
+    def shutdown(self) -> bool:
+        """Return False instead of destroying active workers or an in-flight export."""
+        if self._export_worker is not None and self._export_worker.isRunning():
+            self._notify_status("warning", "CSV export is still running; close again after it finishes")
+            return False
+        if not self._connection_service.shutdown():
+            return False
+        self._batch_timer.stop()
+        self.__com_updater_timer.stop()
+        self.__scroll_timer.stop()
+        return True
 
-                except Exception as e:
-                    logger.log_error(f"Error loading connection {conn_data.get('id', 'unknown')}: {e}")
-                    continue
+    @Slot("QJSValue", result=bool)
+    def apply_performance_settings(self, settings: QJSValue) -> bool:
+        try:
+            values = {**self.get_performance_settings(), **self._settings_dict(settings)}
+            candidate = self._configuration_snapshot()
+            candidate["performance"] = values
+            validate_configuration(candidate)
+            # Persist before changing the active timer, so failure is unambiguous.
+            atomic_json_write(Path(self.__config_path), candidate)
+            self._base_config = candidate
+            self.set_batch_interval(values["frame_interval_ms"])
+            self.set_display_point_limit(values["display_points_per_signal"])
+            self.set_downsample_enabled(values["downsample_enabled"])
+            self.set_downsample_target_hz(values["downsample_target_hz"])
+            self._notify_status("success", "Display settings saved")
+            return True
+        except (OSError, ValueError, TypeError, KeyError) as exc:
+            self._notify_status("error", f"Settings not applied: {exc}")
+            return False
 
-            logger.log_info(f"Successfully loaded {len(self.__connections)} connections from config")
+    @Slot(result="QVariant")
+    def get_workspace(self) -> dict:
+        return deepcopy(self._base_config.get("workspace", {}))
 
-            # Emit signal to update UI
-            self._emit_connections_changed()
+    @Slot("QJSValue", result=bool)
+    def save_workspace(self, workspace: QJSValue) -> bool:
+        try:
+            state = validate_workspace(self._settings_dict(workspace))
+            candidate = self._configuration_snapshot()
+            candidate["workspace"] = state
+            validate_configuration(candidate)
+            atomic_json_write(Path(self.__config_path), candidate)
+            self._base_config = candidate
+            return True
+        except (OSError, ValueError, TypeError) as exc:
+            self._notify_status("error", f"Layout not saved: {exc}")
+            return False
 
-        except FileNotFoundError:
-            logger.log_info(f"Config file not found: {self.__config_path}")
-        except Exception as e:
-            logger.log_error(f"Failed to load connections from config: {e}")
+    @Slot(str, result=str)
+    def export_local_path(self, file_url: str) -> str:
+        try:
+            return str(local_path(file_url))
+        except ValueError as exc:
+            self._notify_status("error", str(exc))
+            return ""

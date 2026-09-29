@@ -1,0 +1,116 @@
+..............FFFFFF......F                                              [100%]
+=================================== FAILURES ===================================
+__________ test_invalid_performance_values_do_not_reach_qt[settings0] __________
+
+settings = {'frame_interval_ms': 'fast'}
+
+    @pytest.mark.parametrize('settings', [
+        {'frame_interval_ms':'fast'}, {'frame_interval_ms':True}, {'frame_interval_ms':0},
+        {'display_points_per_signal':1000000}, {'downsample_enabled':'false'}, {'downsample_target_hz':0},
+    ])
+    def test_invalid_performance_values_do_not_reach_qt(settings):
+>       with pytest.raises(ValueError): validate_configuration({**GOOD,'performance':settings})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_configuration_service.py:49: Failed
+__________ test_invalid_performance_values_do_not_reach_qt[settings1] __________
+
+settings = {'frame_interval_ms': True}
+
+    @pytest.mark.parametrize('settings', [
+        {'frame_interval_ms':'fast'}, {'frame_interval_ms':True}, {'frame_interval_ms':0},
+        {'display_points_per_signal':1000000}, {'downsample_enabled':'false'}, {'downsample_target_hz':0},
+    ])
+    def test_invalid_performance_values_do_not_reach_qt(settings):
+>       with pytest.raises(ValueError): validate_configuration({**GOOD,'performance':settings})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_configuration_service.py:49: Failed
+__________ test_invalid_performance_values_do_not_reach_qt[settings2] __________
+
+settings = {'frame_interval_ms': 0}
+
+    @pytest.mark.parametrize('settings', [
+        {'frame_interval_ms':'fast'}, {'frame_interval_ms':True}, {'frame_interval_ms':0},
+        {'display_points_per_signal':1000000}, {'downsample_enabled':'false'}, {'downsample_target_hz':0},
+    ])
+    def test_invalid_performance_values_do_not_reach_qt(settings):
+>       with pytest.raises(ValueError): validate_configuration({**GOOD,'performance':settings})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_configuration_service.py:49: Failed
+__________ test_invalid_performance_values_do_not_reach_qt[settings3] __________
+
+settings = {'display_points_per_signal': 1000000}
+
+    @pytest.mark.parametrize('settings', [
+        {'frame_interval_ms':'fast'}, {'frame_interval_ms':True}, {'frame_interval_ms':0},
+        {'display_points_per_signal':1000000}, {'downsample_enabled':'false'}, {'downsample_target_hz':0},
+    ])
+    def test_invalid_performance_values_do_not_reach_qt(settings):
+>       with pytest.raises(ValueError): validate_configuration({**GOOD,'performance':settings})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_configuration_service.py:49: Failed
+__________ test_invalid_performance_values_do_not_reach_qt[settings4] __________
+
+settings = {'downsample_enabled': 'false'}
+
+    @pytest.mark.parametrize('settings', [
+        {'frame_interval_ms':'fast'}, {'frame_interval_ms':True}, {'frame_interval_ms':0},
+        {'display_points_per_signal':1000000}, {'downsample_enabled':'false'}, {'downsample_target_hz':0},
+    ])
+    def test_invalid_performance_values_do_not_reach_qt(settings):
+>       with pytest.raises(ValueError): validate_configuration({**GOOD,'performance':settings})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_configuration_service.py:49: Failed
+__________ test_invalid_performance_values_do_not_reach_qt[settings5] __________
+
+settings = {'downsample_target_hz': 0}
+
+    @pytest.mark.parametrize('settings', [
+        {'frame_interval_ms':'fast'}, {'frame_interval_ms':True}, {'frame_interval_ms':0},
+        {'display_points_per_signal':1000000}, {'downsample_enabled':'false'}, {'downsample_target_hz':0},
+    ])
+    def test_invalid_performance_values_do_not_reach_qt(settings):
+>       with pytest.raises(ValueError): validate_configuration({**GOOD,'performance':settings})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_configuration_service.py:49: Failed
+_____________ test_old_receiver_events_cannot_corrupt_replacement ______________
+
+service = <Backend.connection_service.ConnectionService object at 0x7f937e48a030>
+
+    def test_old_receiver_events_cannot_corrupt_replacement(service):
+        packets=[]; service.on_data=lambda *a:packets.append(a)
+        key=service.create('Test','A',{}); service.start(key)
+        old=service.connections[key].receiver
+        assert service.update_settings(key,{})
+        old.connection_changed.emit(False)
+        old.new_data.emit(b'old')
+>       assert service.connections[key].status=='connected'
+E       AssertionError: assert 'connecting' == 'connected'
+E         
+E         - connected
+E         + connecting
+
+tests/test_connection_service.py:87: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_configuration_service.py::test_invalid_performance_values_do_not_reach_qt[settings0] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/test_configuration_service.py::test_invalid_performance_values_do_not_reach_qt[settings1] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/test_configuration_service.py::test_invalid_performance_values_do_not_reach_qt[settings2] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/test_configuration_service.py::test_invalid_performance_values_do_not_reach_qt[settings3] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/test_configuration_service.py::test_invalid_performance_values_do_not_reach_qt[settings4] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/test_configuration_service.py::test_invalid_performance_values_do_not_reach_qt[settings5] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/test_connection_service.py::test_old_receiver_events_cannot_corrupt_replacement - AssertionError: assert 'connecting' == 'connected'
+  
+  - connected
+  + connecting
+7 failed, 20 passed in 0.18s

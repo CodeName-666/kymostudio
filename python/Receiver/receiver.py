@@ -5,7 +5,9 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from typing import Any, Dict, Optional
 
-from PySide6.QtCore import QObject, Signal, Slot
+from PySide6.QtCore import QObject, QTimer, Qt, Signal, Slot
+
+from Core.ingress import IngressQueue
 
 from .receiver_thread import ReceiverThread
 
@@ -27,6 +29,8 @@ class Receiver(QObject, metaclass=MetaQObjectABC):
     # Bytes emitted from the underlying worker thread. Consumers connect to
     # this signal to receive decoded payload from any receiver implementation.
     new_data = Signal(bytes)
+    connection_changed = Signal(bool)
+    connection_failed = Signal(str)
 
     def __init__(
         self,
@@ -37,6 +41,10 @@ class Receiver(QObject, metaclass=MetaQObjectABC):
         self._receiver_thread: Optional[ReceiverThread] = None
         self._connected: bool = False
         self._config: Dict[str, Any] = {}
+        self._ingress = IngressQueue()
+        self._drain_timer = QTimer(self)
+        self._drain_timer.setInterval(16)
+        self._drain_timer.timeout.connect(self._drain_ingress)
         if receiver_thread is not None:
             self.attach_thread(receiver_thread)
 
@@ -55,15 +63,16 @@ class Receiver(QObject, metaclass=MetaQObjectABC):
             raise ValueError("receiver_thread must not be None")
 
         if self._receiver_thread is not None:
-            try:
-                self._receiver_thread.new_data.disconnect(self._on_thread_data)
-            except (TypeError, RuntimeError):
-                # When disconnecting during teardown the signal might already
-                # be disconnected or thread deleted. Silently ignore those.
-                pass
+            if self._receiver_thread.isRunning():
+                raise RuntimeError("Cannot replace a running acquisition worker")
+            self.detach_thread()
 
         self._receiver_thread = receiver_thread
-        self._receiver_thread.new_data.connect(self._on_thread_data)
+        # Only this tiny, locked enqueue executes in the producing thread.
+        # Parsing, model changes and status signals stay on the GUI thread.
+        self._receiver_thread.new_data.connect(self._enqueue_payload, Qt.DirectConnection)
+        self._receiver_thread.connection_state.connect(self._set_connected, Qt.QueuedConnection)
+        self._receiver_thread.finished.connect(self._worker_finished, Qt.QueuedConnection)
 
     @property
     def receiver_thread(self) -> Optional[ReceiverThread]:
@@ -75,11 +84,16 @@ class Receiver(QObject, metaclass=MetaQObjectABC):
         if self._receiver_thread is None:
             return
 
+        if self._receiver_thread.isRunning():
+            raise RuntimeError("Cannot detach a running acquisition worker")
         try:
-            self._receiver_thread.new_data.disconnect(self._on_thread_data)
+            self._receiver_thread.connection_state.disconnect(self._set_connected)
+            self._receiver_thread.finished.disconnect(self._worker_finished)
+            self._receiver_thread.new_data.disconnect(self._enqueue_payload)
         except (TypeError, RuntimeError):
             pass
 
+        self._receiver_thread.deleteLater()
         self._receiver_thread = None
 
     @Slot(bytes)
@@ -104,19 +118,50 @@ class Receiver(QObject, metaclass=MetaQObjectABC):
         if not self.is_connected() and not self.open_connection():
             raise ConnectionError("Receiver failed to open the connection")
 
+        self._drain_timer.start()
         if self._receiver_thread and not self._receiver_thread.isRunning():
             self._receiver_thread.start()
 
     def stop(self) -> None:
-        """Stop the worker thread and close the connection."""
+        """Cooperatively stop; never destroy a still-running QThread.
 
-        if self._receiver_thread and self._receiver_thread.isRunning():
-            # Ask the thread to finish its loop, then wait for it to end.
-            self._receiver_thread.stop_event.emit()
-            self._receiver_thread.wait()
+        A stubborn driver produces a visible error instead of an unlimited
+        wait. The backend retains the receiver so a later stop can retry.
+        """
+        self._stop_worker()
+        self._drain_timer.stop()
+        while len(self._ingress):
+            self._drain_ingress()
+        self.close_connection()
+        self._ingress.clear()
+        self._set_connected(False)
 
-        if self.is_connected():
-            self.close_connection()
+    def _stop_worker(self) -> None:
+        worker = self._receiver_thread
+        if worker and worker.isRunning():
+            worker.on_stop()
+            if not worker.wait(1500):
+                raise TimeoutError("Acquisition worker did not stop within 1.5 s; connection retained")
+
+    @property
+    def dropped_payloads(self) -> int:
+        return self._ingress.dropped
+
+    @Slot(bytes)
+    def _enqueue_payload(self, payload: bytes) -> None:
+        self._ingress.put(payload)
+
+    @Slot()
+    def _drain_ingress(self) -> None:
+        for payload in self._ingress.drain(256):
+            self._on_thread_data(payload)
+
+    @Slot()
+    def _worker_finished(self) -> None:
+        if self.sender() is self._receiver_thread:
+            self._set_connected(False)
+            if not self._receiver_thread.stopped():
+                self.connection_failed.emit("Acquisition worker stopped unexpectedly; restart the connection")
 
     def send_response(self, response: bytes) -> None:
         """Forward a response payload to the worker thread if available."""
@@ -151,8 +196,14 @@ class Receiver(QObject, metaclass=MetaQObjectABC):
     def is_connected(self) -> bool:
         return self._connected
 
+    @Slot(bool)
     def _set_connected(self, status: bool) -> None:
-        self._connected = status
+        sender = self.sender()
+        if isinstance(sender, ReceiverThread) and sender is not self._receiver_thread:
+            return
+        if self._connected != status:
+            self._connected = status
+            self.connection_changed.emit(status)
 
     # ------------------------------------------------------------------
     # Interface contracts

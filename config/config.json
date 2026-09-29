@@ -1,5 +1,4 @@
 {
-
   "imports": [
     "../../qml",
     "../../qml/imports",
@@ -54,9 +53,6 @@
         "offset": 0.0
       }
     }
-
- 
-    
   ],
   "qml": {
     "interfaces": [
@@ -67,11 +63,16 @@
       "Test"
     ]
   },
-  
-  "logging" : {
-    "enabled": 1,
-    "console_log": 1,
-    "name" : "logfile.log",
-    "level": "DEBUG"
+  "logging": {
+    "enabled": true,
+    "console_log": false,
+    "name": "plotter.log",
+    "level": "INFO"
+  },
+  "performance": {
+    "frame_interval_ms": 33,
+    "display_points_per_signal": 10000,
+    "downsample_enabled": false,
+    "downsample_target_hz": 1000
   }
 }

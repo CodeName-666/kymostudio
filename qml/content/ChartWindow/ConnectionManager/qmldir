@@ -1,0 +1,6 @@
+module ConnectionManager
+
+SerialSettings 1.0 SerialSettings.qml
+MqttSettings 1.0 MqttSettings.qml
+TelnetSettings 1.0 TelnetSettings.qml
+TestSettings 1.0 TestSettings.qml

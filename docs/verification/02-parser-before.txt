@@ -1,0 +1,16 @@
+
+==================================== ERRORS ====================================
+________________ ERROR collecting tests/test_payload_parser.py _________________
+ImportError while importing test module '/mnt/data/PlotterApp_Optimized/tests/test_payload_parser.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_payload_parser.py:5: in <module>
+    from Core.parsing import parse_payload
+E   ModuleNotFoundError: No module named 'Core'
+=========================== short test summary info ============================
+ERROR tests/test_payload_parser.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.20s

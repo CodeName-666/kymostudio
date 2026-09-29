@@ -29,7 +29,7 @@ class TestReceiver(Receiver):
     def __init__(self, defaults: Optional[Dict[str, Any]] = None) -> None:
         super().__init__(receiver_thread=None)
         self._settings: Dict[str, Any] = defaults.copy() if defaults else {}
-        self._timer = QTimer()
+        self._timer = QTimer(self)
         self._timer.timeout.connect(self._tick)
         self._t = 0.0
         self._start_time = 0.0
@@ -49,12 +49,11 @@ class TestReceiver(Receiver):
 
     def open_connection(self) -> bool:
         self._t = 0.0
-        self._start_time = time.time()
+        self._start_time = time.monotonic()
         self._set_connected(True)
         self._timer.start()
         test_type = self._settings.get("type", "Sinus")
         logger.log_info(f"TestReceiver started: {test_type} mode")
-        logger.log_debug(f"TestReceiver settings: {self._settings}")
         return True
 
     def close_connection(self) -> None:
@@ -73,7 +72,7 @@ class TestReceiver(Receiver):
         self._t += dt
 
         # Calculate timestamp if enabled
-        timestamp = time.time() - self._start_time if use_timestamp else None
+        timestamp = time.monotonic() - self._start_time if use_timestamp else None
 
         if test_type == "XYMulti":
             self._emit_xy_multi()

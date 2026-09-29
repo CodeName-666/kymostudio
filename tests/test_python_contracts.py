@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+import pytest
+pytest.importorskip("PySide6", reason="Install requirements-dev.txt to run Qt integration tests")
+pytest.importorskip("can", reason="python-can transport dependency missing")
+pytest.importorskip("serial", reason="pyserial transport dependency missing")
+pytest.importorskip("paho.mqtt.client", reason="paho-mqtt transport dependency missing")
+
 import inspect
 import io
 import json
@@ -42,6 +48,7 @@ from Receiver.connections.telnet_client_connection import TelnetClientConnection
 from Receiver.connections.telnet_server_connection import TelnetServerConnection  # noqa: E402
 from Receiver.registry import ReceiverRegistry  # noqa: E402
 from Receiver.test_receiver import TestReceiver as SyntheticReceiver  # noqa: E402
+from Core.paths import user_config_path
 from Logger.logger import Logger, log_info  # noqa: E402
 
 
@@ -94,7 +101,7 @@ class BackendCompatibilityTests(unittest.TestCase):
             receiver=receiver,
         )
 
-        self.assertTrue(self.backend.connect())
+        self.assertTrue(self.backend.connect_selected())
         self.assertTrue(self.backend.is_connect())
         self.assertTrue(self.backend.connected())
         self.assertTrue(self.backend.disconnectFrom("Test"))
@@ -103,7 +110,7 @@ class BackendCompatibilityTests(unittest.TestCase):
     def test_persistent_config_path_is_independent_of_working_directory(self) -> None:
         config_path = Path(self.backend._Backend__config_path)
         self.assertTrue(config_path.is_absolute())
-        self.assertEqual(config_path, PROJECT_ROOT / "config" / "config.json")
+        self.assertEqual(config_path, user_config_path())
 
 
 class CanReceiverTests(unittest.TestCase):
@@ -142,10 +149,9 @@ class CanReceiverTests(unittest.TestCase):
 
         settings_qml = PROJECT_ROOT / "qml" / "content" / "ChartWindow" / "ConnectionManager" / "CanSettings.qml"
         self.assertTrue(settings_qml.is_file())
-        for dialog_name in ("NewConnectionDialog.qml", "EditConnectionDialog.qml"):
-            dialog = settings_qml.with_name(dialog_name).read_text(encoding="utf-8")
-            self.assertIn('case "CAN":', dialog)
-            self.assertIn('componentPath = "CanSettings.qml"', dialog)
+        dialog = (PROJECT_ROOT / "qml" / "content" / "Workbench" / "SourcesDialog.qml").read_text(encoding="utf-8")
+        self.assertIn('CAN: "CanSettings.qml"', dialog)
+        self.assertIn('"../ChartWindow/ConnectionManager/"', dialog)
 
 
 class LegacyAdapterTests(unittest.TestCase):

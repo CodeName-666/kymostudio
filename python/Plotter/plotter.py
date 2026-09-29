@@ -1,51 +1,47 @@
+"""Own application/engine lifetime and explicit QML context dependencies."""
+from pathlib import Path
 
-import typing
-from os.path import abspath, dirname, join
-from Backend.backend import Backend
-from Backend.Windows.window_manager_bridge import WindowManagerBridge
-from PySide6.QtWidgets import QApplication
-from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtCore import QObject
+from PySide6.QtQml import QQmlApplicationEngine
+from PySide6.QtWidgets import QApplication
+
+from Core.paths import PROJECT_ROOT
+from Backend.series_bridge import SeriesBridge
 
 
 class Plotter(QObject):
-
-    def __init__(self, args, config: typing.Dict) -> None:
+    def __init__(self, args: list[str], config: dict) -> None:
+        app = QApplication.instance() or QApplication(args)
         super().__init__()
+        self.app = app
+        self.engine = QQmlApplicationEngine()
+        # Import resources only from the delivered application, not arbitrary
+        # paths contained in an imported user configuration.
+        for path in ('qml', 'qml/imports', 'qml/content'):
+            self.engine.addImportPath(str(PROJECT_ROOT / path))
+        self._backend = None
+        self._window_manager = None
+        self._series_bridge = SeriesBridge(self)
+        self.engine.rootContext().setContextProperty('SeriesBridge', self._series_bridge)
 
-        self.__app = QApplication(args)
-        self.__engine = QQmlApplicationEngine()
+    def set_backend(self, backend) -> None:
+        self._backend = backend
+        self.engine.rootContext().setContextProperty('Backend', backend)
 
-        self.setImportPaths(config["imports"])
-        # Expose the Python object to QML
-        self.__context = self.__engine.rootContext()
-        # Get the path of the current directory, and then add the name
-        # of the QML file, to load it.
-        self.__qmlFile = join(dirname(__file__), '../../qml/main.qml')
+    def set_window_manager(self, window_manager) -> None:
+        self._window_manager = window_manager
+        self.engine.rootContext().setContextProperty('WindowManager', window_manager)
 
-        self.__backend: Backend | None = None
-        self.__window_manager: WindowManagerBridge | None = None
-
-    def set_backend(self, backend: Backend):
-        self.__backend = backend
-        self.__context.setContextProperty("Backend", backend)
-
-    def set_window_manager(self, window_manager: WindowManagerBridge):
-        self.__window_manager = window_manager
-        self.__context.setContextProperty("WindowManager", window_manager)
-
-    def load_app(self):
-        self.__engine.load(abspath(self.__qmlFile))
+    def load_app(self) -> None:
+        self.engine.load(str(PROJECT_ROOT / 'qml/main.qml'))
 
     def run(self) -> int:
-        return self.__app.exec_()
+        return self.app.exec()
 
-    def rootObjects(self) -> typing.List:
-        return self.__engine.rootObjects()
+    def rootObjects(self) -> list:
+        return self.engine.rootObjects()
 
-    def setImportPaths(self, path_lst: typing.List):
-        importlst = self.__engine.importPathList()
-        for path in path_lst:
-            importlst.append(join(dirname(__file__), path))
-        self.__engine.setImportPathList(importlst)
-
+    def setImportPaths(self, path_list: list) -> None:
+        """Compatibility API; resolve imports against the application root."""
+        for path in path_list:
+            self.engine.addImportPath(str((Path(__file__).parent / path).resolve()))

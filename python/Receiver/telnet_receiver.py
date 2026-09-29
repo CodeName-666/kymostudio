@@ -30,17 +30,17 @@ class TelnetClientThread(ReceiverThread):
         while not self.stopped():
             if self._socket is None:
                 if not self._connect():
-                    self.msleep(int(self._reconnect_delay * 1000))
+                    self.interruptible_wait(self._reconnect_delay)
                     continue
 
             try:
                 chunk = self._socket.recv(self._read_size)
             except socket.timeout:
                 continue
-            except OSError as exc:
+            except (OSError, AttributeError) as exc:
                 logger.log_error(f"Telnet client recv failed: {exc}")
                 self._close_socket()
-                self.msleep(int(self._reconnect_delay * 1000))
+                self.interruptible_wait(self._reconnect_delay)
                 continue
 
             if chunk:
@@ -58,22 +58,27 @@ class TelnetClientThread(ReceiverThread):
             return
         try:
             self._socket.sendall(response)
-        except OSError as exc:
+        except (OSError, AttributeError) as exc:
             logger.log_error(f"Telnet client send failed: {exc}")
             self._close_socket()
 
     def stop(self) -> None:
+        super().stop()
         self._close_socket()
 
     def _connect(self) -> bool:
         try:
-            sock = socket.create_connection((self._host, self._port), timeout=5)
-        except OSError as exc:
+            sock = socket.create_connection((self._host, self._port), timeout=1.0)
+        except (OSError, AttributeError) as exc:
             logger.log_warning(f"Telnet client connect failed: {exc}")
             return False
 
         sock.settimeout(1.0)
+        if self.stopped():
+            sock.close()
+            return False
         self._socket = sock
+        self.connection_state.emit(True)
         logger.log_info("Telnet client connected to %s:%s", self._host, self._port)
         return True
 
@@ -88,6 +93,7 @@ class TelnetClientThread(ReceiverThread):
             except OSError:
                 pass
             self._socket = None
+            self.connection_state.emit(False)
         self._protocol_decoder.reset()
 
     def _emit_messages(self, chunk: bytes) -> None:
@@ -110,7 +116,7 @@ class TelnetServerThread(ReceiverThread):
         logger.log_info("Telnet server thread listening on %s:%s", self._host, self._port)
         while not self.stopped():
             if self._listener is None and not self._setup_listener():
-                self.msleep(int(self._reconnect_delay * 1000))
+                self.interruptible_wait(self._reconnect_delay)
                 continue
 
             if self._client is None and not self._accept_client():
@@ -123,7 +129,7 @@ class TelnetServerThread(ReceiverThread):
                 chunk = self._client.recv(self._read_size)
             except socket.timeout:
                 continue
-            except OSError as exc:
+            except (OSError, AttributeError) as exc:
                 logger.log_error(f"Telnet server recv failed: {exc}")
                 self._close_client()
                 continue
@@ -144,11 +150,12 @@ class TelnetServerThread(ReceiverThread):
             return
         try:
             self._client.sendall(response)
-        except OSError as exc:
+        except (OSError, AttributeError) as exc:
             logger.log_error(f"Telnet server send failed: {exc}")
             self._close_client()
 
     def stop(self) -> None:
+        super().stop()
         self._close_client()
         self._close_listener()
 
@@ -162,7 +169,7 @@ class TelnetServerThread(ReceiverThread):
             self._listener = listener
             logger.log_info("Telnet server listening on %s:%s", self._host, self._port)
             return True
-        except OSError as exc:
+        except (OSError, AttributeError) as exc:
             logger.log_error(f"Telnet server listen failed: {exc}")
             self._close_listener()
             return False
@@ -174,13 +181,14 @@ class TelnetServerThread(ReceiverThread):
             client, addr = self._listener.accept()
         except socket.timeout:
             return False
-        except OSError as exc:
+        except (OSError, AttributeError) as exc:
             logger.log_error(f"Telnet server accept failed: {exc}")
             self._close_listener()
             return False
 
         client.settimeout(1.0)
         self._client = client
+        self.connection_state.emit(True)
         logger.log_info("Telnet server accepted connection from %s", addr)
         return True
 
@@ -195,6 +203,7 @@ class TelnetServerThread(ReceiverThread):
             except OSError:
                 pass
             self._client = None
+            self.connection_state.emit(False)
         self._protocol_decoder.reset()
 
     def _close_listener(self) -> None:
@@ -226,13 +235,11 @@ class TelnetBaseReceiver(Receiver, ABC):
         if self._worker is None:
             self._worker = self._create_worker()
             self.attach_thread(self._worker)
-        self._set_connected(True)
+        # Actual connection state is reported by the worker after handshake.
         return True
 
     def close_connection(self) -> None:
-        if self.receiver_thread and self.receiver_thread.isRunning():
-            self.receiver_thread.stop_event.emit()
-            self.receiver_thread.wait()
+        self._stop_worker()
         self._worker = None
         self.detach_thread()
         self._set_connected(False)

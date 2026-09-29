@@ -1,0 +1,26 @@
+........................................................................ [ 58%]
+......................F............................                      [100%]
+=================================== FAILURES ===================================
+_ QmlArchitectureContractTests.test_suspended_renderers_filter_unassigned_signals_before_buffering _
+
+self = <test_qml_architecture.QmlArchitectureContractTests testMethod=test_suspended_renderers_filter_unassigned_signals_before_buffering>
+
+    def test_suspended_renderers_filter_unassigned_signals_before_buffering(self) -> None:
+        xy = self._read("ChartTypes/XYChartRenderer.qml")
+        time_series = self._read("ChartTypes/TimeSeriesRenderer.qml")
+        xy_function = xy[xy.index("function appendPointsBatch") : xy.index("function clearLine")]
+        time_function = time_series[
+            time_series.index("function appendPointsBatch") : time_series.index("function removeLine")
+        ]
+>       self.assertLess(xy_function.index("if(!series)"), xy_function.index("updatesSuspended"))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       ValueError: substring not found
+
+tests/test_qml_architecture.py:96: ValueError
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_binary_protocol.py:6: Install requirements-dev.txt to run Qt integration tests
+SKIPPED [1] tests/test_chart_coordinate_modes.py:6: Install requirements-dev.txt to run Qt integration tests
+SKIPPED [1] tests/test_python_contracts.py:6: Install requirements-dev.txt to run Qt integration tests
+SKIPPED [1] tests/test_ui_architecture_regressions.py:6: Install requirements-dev.txt to run Qt integration tests
+FAILED tests/test_qml_architecture.py::QmlArchitectureContractTests::test_suspended_renderers_filter_unassigned_signals_before_buffering - ValueError: substring not found
+1 failed, 122 passed, 4 skipped in 0.28s

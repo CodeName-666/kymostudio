@@ -1,0 +1,230 @@
+FFFFFFFFFFFFFFF.                                                         [100%]
+=================================== FAILURES ===================================
+____________ test_invalid_saved_axis_values_are_rejected[xMin-nan] _____________
+
+field = 'xMin', value = nan
+
+    @pytest.mark.parametrize('field,value', [
+        ('xMin', float('nan')), ('xMax', float('inf')), ('yMin', True),
+        ('yMax', '2'), ('timeWindow', 0), ('timeWindow', 90000),
+        ('autoScroll', 'false'), ('autoScaleY', 1),
+        ('xMin', 60), ('yMin', 2),
+    ])
+    def test_invalid_saved_axis_values_are_rejected(field, value):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_workspace_validation.py:24: Failed
+____________ test_invalid_saved_axis_values_are_rejected[xMax-inf] _____________
+
+field = 'xMax', value = inf
+
+    @pytest.mark.parametrize('field,value', [
+        ('xMin', float('nan')), ('xMax', float('inf')), ('yMin', True),
+        ('yMax', '2'), ('timeWindow', 0), ('timeWindow', 90000),
+        ('autoScroll', 'false'), ('autoScaleY', 1),
+        ('xMin', 60), ('yMin', 2),
+    ])
+    def test_invalid_saved_axis_values_are_rejected(field, value):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_workspace_validation.py:24: Failed
+____________ test_invalid_saved_axis_values_are_rejected[yMin-True] ____________
+
+field = 'yMin', value = True
+
+    @pytest.mark.parametrize('field,value', [
+        ('xMin', float('nan')), ('xMax', float('inf')), ('yMin', True),
+        ('yMax', '2'), ('timeWindow', 0), ('timeWindow', 90000),
+        ('autoScroll', 'false'), ('autoScaleY', 1),
+        ('xMin', 60), ('yMin', 2),
+    ])
+    def test_invalid_saved_axis_values_are_rejected(field, value):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_workspace_validation.py:24: Failed
+_____________ test_invalid_saved_axis_values_are_rejected[yMax-2] ______________
+
+field = 'yMax', value = '2'
+
+    @pytest.mark.parametrize('field,value', [
+        ('xMin', float('nan')), ('xMax', float('inf')), ('yMin', True),
+        ('yMax', '2'), ('timeWindow', 0), ('timeWindow', 90000),
+        ('autoScroll', 'false'), ('autoScaleY', 1),
+        ('xMin', 60), ('yMin', 2),
+    ])
+    def test_invalid_saved_axis_values_are_rejected(field, value):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_workspace_validation.py:24: Failed
+__________ test_invalid_saved_axis_values_are_rejected[timeWindow-0] ___________
+
+field = 'timeWindow', value = 0
+
+    @pytest.mark.parametrize('field,value', [
+        ('xMin', float('nan')), ('xMax', float('inf')), ('yMin', True),
+        ('yMax', '2'), ('timeWindow', 0), ('timeWindow', 90000),
+        ('autoScroll', 'false'), ('autoScaleY', 1),
+        ('xMin', 60), ('yMin', 2),
+    ])
+    def test_invalid_saved_axis_values_are_rejected(field, value):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_workspace_validation.py:24: Failed
+________ test_invalid_saved_axis_values_are_rejected[timeWindow-90000] _________
+
+field = 'timeWindow', value = 90000
+
+    @pytest.mark.parametrize('field,value', [
+        ('xMin', float('nan')), ('xMax', float('inf')), ('yMin', True),
+        ('yMax', '2'), ('timeWindow', 0), ('timeWindow', 90000),
+        ('autoScroll', 'false'), ('autoScaleY', 1),
+        ('xMin', 60), ('yMin', 2),
+    ])
+    def test_invalid_saved_axis_values_are_rejected(field, value):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_workspace_validation.py:24: Failed
+________ test_invalid_saved_axis_values_are_rejected[autoScroll-false] _________
+
+field = 'autoScroll', value = 'false'
+
+    @pytest.mark.parametrize('field,value', [
+        ('xMin', float('nan')), ('xMax', float('inf')), ('yMin', True),
+        ('yMax', '2'), ('timeWindow', 0), ('timeWindow', 90000),
+        ('autoScroll', 'false'), ('autoScaleY', 1),
+        ('xMin', 60), ('yMin', 2),
+    ])
+    def test_invalid_saved_axis_values_are_rejected(field, value):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_workspace_validation.py:24: Failed
+__________ test_invalid_saved_axis_values_are_rejected[autoScaleY-1] ___________
+
+field = 'autoScaleY', value = 1
+
+    @pytest.mark.parametrize('field,value', [
+        ('xMin', float('nan')), ('xMax', float('inf')), ('yMin', True),
+        ('yMax', '2'), ('timeWindow', 0), ('timeWindow', 90000),
+        ('autoScroll', 'false'), ('autoScaleY', 1),
+        ('xMin', 60), ('yMin', 2),
+    ])
+    def test_invalid_saved_axis_values_are_rejected(field, value):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_workspace_validation.py:24: Failed
+_____________ test_invalid_saved_axis_values_are_rejected[xMin-60] _____________
+
+field = 'xMin', value = 60
+
+    @pytest.mark.parametrize('field,value', [
+        ('xMin', float('nan')), ('xMax', float('inf')), ('yMin', True),
+        ('yMax', '2'), ('timeWindow', 0), ('timeWindow', 90000),
+        ('autoScroll', 'false'), ('autoScaleY', 1),
+        ('xMin', 60), ('yMin', 2),
+    ])
+    def test_invalid_saved_axis_values_are_rejected(field, value):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_workspace_validation.py:24: Failed
+_____________ test_invalid_saved_axis_values_are_rejected[yMin-2] ______________
+
+field = 'yMin', value = 2
+
+    @pytest.mark.parametrize('field,value', [
+        ('xMin', float('nan')), ('xMax', float('inf')), ('yMin', True),
+        ('yMax', '2'), ('timeWindow', 0), ('timeWindow', 90000),
+        ('autoScroll', 'false'), ('autoScaleY', 1),
+        ('xMin', 60), ('yMin', 2),
+    ])
+    def test_invalid_saved_axis_values_are_rejected(field, value):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_workspace_validation.py:24: Failed
+_______________ test_axis_state_must_be_a_complete_object[view0] _______________
+
+view = []
+
+    @pytest.mark.parametrize('view', [[], 'bad', {'xMin': 0}])
+    def test_axis_state_must_be_a_complete_object(view):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_workspace_validation.py:29: Failed
+________________ test_axis_state_must_be_a_complete_object[bad] ________________
+
+view = 'bad'
+
+    @pytest.mark.parametrize('view', [[], 'bad', {'xMin': 0}])
+    def test_axis_state_must_be_a_complete_object(view):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_workspace_validation.py:29: Failed
+_______________ test_axis_state_must_be_a_complete_object[view2] _______________
+
+view = {'xMin': 0}
+
+    @pytest.mark.parametrize('view', [[], 'bad', {'xMin': 0}])
+    def test_axis_state_must_be_a_complete_object(view):
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_workspace_validation.py:29: Failed
+_________________ test_version_boolean_is_not_a_schema_version _________________
+
+    def test_version_boolean_is_not_a_schema_version():
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE <class 'ValueError'>
+
+tests/test_workspace_validation.py:33: Failed
+_____ test_valid_workspace_is_copy_isolated_and_normalizes_missing_arrays ______
+
+    def test_valid_workspace_is_copy_isolated_and_normalizes_missing_arrays():
+        data = {'version': 1, 'charts': [CHART]}
+        restored = validate_workspace(data)
+>       assert restored['signals'] == []
+               ^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'signals'
+
+tests/test_workspace_validation.py:39: KeyError
+=========================== short test summary info ============================
+FAILED tests/test_workspace_validation.py::test_invalid_saved_axis_values_are_rejected[xMin-nan] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/test_workspace_validation.py::test_invalid_saved_axis_values_are_rejected[xMax-inf] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/test_workspace_validation.py::test_invalid_saved_axis_values_are_rejected[yMin-True] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/test_workspace_validation.py::test_invalid_saved_axis_values_are_rejected[yMax-2] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/test_workspace_validation.py::test_invalid_saved_axis_values_are_rejected[timeWindow-0] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/test_workspace_validation.py::test_invalid_saved_axis_values_are_rejected[timeWindow-90000] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/test_workspace_validation.py::test_invalid_saved_axis_values_are_rejected[autoScroll-false] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/test_workspace_validation.py::test_invalid_saved_axis_values_are_rejected[autoScaleY-1] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/test_workspace_validation.py::test_invalid_saved_axis_values_are_rejected[xMin-60] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/test_workspace_validation.py::test_invalid_saved_axis_values_are_rejected[yMin-2] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/test_workspace_validation.py::test_axis_state_must_be_a_complete_object[view0] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/test_workspace_validation.py::test_axis_state_must_be_a_complete_object[bad] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/test_workspace_validation.py::test_axis_state_must_be_a_complete_object[view2] - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/test_workspace_validation.py::test_version_boolean_is_not_a_schema_version - Failed: DID NOT RAISE <class 'ValueError'>
+FAILED tests/test_workspace_validation.py::test_valid_workspace_is_copy_isolated_and_normalizes_missing_arrays - KeyError: 'signals'
+15 failed, 1 passed in 0.19s

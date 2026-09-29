@@ -1,0 +1,2 @@
+40 distinct file/API call pairs checked: all referenced Backend methods exist.
+Qt Slot overload resolution is covered only by the real Qt smoke/integration tests.

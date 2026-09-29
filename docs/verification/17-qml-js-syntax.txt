@@ -1,0 +1,2 @@
+100 QML/JS files examined: 11 standalone scripts and 467 embedded JavaScript functions parse successfully.
+QML type resolution, declarative bindings, native APIs and rendering are NOT checked here. Run the Qt smoke test.

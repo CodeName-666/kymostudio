@@ -1,4 +1,6 @@
 import logging
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 # This Python file uses the following encoding: utf-8
 from PySide6.QtCore import QObject, Slot, Property
 import typing
@@ -60,17 +62,17 @@ class Logger(QObject):
     def log_message(self, type: str, msg, *args, **kwargs):
         if self.enabled:
             if(type == 'ERROR'):
-                logging.error(msg, *args, **kwargs)
+                logging.getLogger("PlotterApp").error(msg, *args, **kwargs)
             elif(type == 'WARN'):
-                logging.warning(msg, *args, **kwargs)
+                logging.getLogger("PlotterApp").warning(msg, *args, **kwargs)
             elif(type == 'INFO'):
-                logging.info(msg, *args, **kwargs)
+                logging.getLogger("PlotterApp").info(msg, *args, **kwargs)
             elif(type == 'DEBUG'):
-                logging.debug(msg, *args, **kwargs)
+                logging.getLogger("PlotterApp").debug(msg, *args, **kwargs)
             elif(type == 'STACK'):
-                logging.debug(msg, *args, **kwargs)
+                logging.getLogger("PlotterApp").debug(msg, *args, **kwargs)
             else:
-                logging.debug('INVALID LOG_TYPE: %s', msg)
+                logging.getLogger("PlotterApp").debug('INVALID LOG_TYPE: %s', msg)
 
         if self.console_log:
             try:
@@ -106,14 +108,25 @@ class Logger(QObject):
         self.log_message("STACK", 'QML Stack - {}'.format(stack_info))
 
     def config(self, config: dict) -> None:
-        self.enabled = config["enabled"]
-        self.console_log = config["console_log"]
-        log_level = config["level"]
-        name = config["name"]
-
+        """Use a bounded rotating log instead of an ever-growing project file."""
+        self.enabled = bool(config.get("enabled", True))
+        self.console_log = bool(config.get("console_log", False))
+        log = logging.getLogger("PlotterApp")
+        log.propagate = False
+        level = getattr(logging, str(config.get("level", "INFO")).upper(), logging.INFO)
+        log.setLevel(level if isinstance(level, int) else logging.INFO)
+        for handler in list(log.handlers):
+            log.removeHandler(handler)
+            handler.close()
         if self.enabled:
-            logging.basicConfig(filename=name,
-                                format='%(asctime)s: %(levelname)s - %(message)s', level=log_level)
+            path = Path(config.get("name", "plotter.log"))
+            try:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                handler = RotatingFileHandler(path, maxBytes=2*1024*1024, backupCount=3, encoding="utf-8")
+            except OSError:
+                handler = logging.StreamHandler()
+            handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+            log.addHandler(handler)
 
 
 if __name__ == "__main__":

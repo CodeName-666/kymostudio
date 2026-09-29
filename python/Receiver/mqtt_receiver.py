@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import base64
 import json
+import time
 import re
 from typing import Any, Callable, Dict, Iterable, Optional
 
 import paho.mqtt.client as mqtt
 
 from Logger import logger
+
+from PySide6.QtCore import Qt
 
 from .receiver import Receiver
 from .receiver_thread import ReceiverThread
@@ -114,31 +117,39 @@ class MqttWorkerThread(ReceiverThread):
         self._username = username
         self._password = password
         self._tx_topic = tx_topic
-        self._status_callback = status_callback
-        self._client = mqtt.Client(client_id=self._client_id or None)
+        # Compatibility callback is queued into the owning (GUI) thread.
+        if status_callback:
+            self.connection_state.connect(status_callback, Qt.QueuedConnection)
+        self._client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=self._client_id or "")
         if username:
             self._client.username_pw_set(username, password or None)
+        self._client.connect_timeout = 1.0
         self._client.on_connect = self._on_connect
         self._client.on_disconnect = self._on_disconnect
         self._client.on_message = self._on_message
         self._connected = False
+        self._session_open = False
 
     def run(self) -> None:
         logger.log_info("MQTT worker thread started for %s:%s", self._host, self._port)
 
         while not self.stopped():
-            if not self._connected:
+            if not self._session_open:
                 if not self._connect():
-                    self.msleep(2000)
+                    self.interruptible_wait(2.0)
                     continue
+                self._session_open = True
+                acknowledgment_deadline = time.monotonic() + 10.0
 
-            rc = self._client.loop(timeout=1.0)
-            if rc != mqtt.MQTT_ERR_SUCCESS and not self.stopped():
+            rc = self._client.loop(timeout=0.2)
+            if (rc != mqtt.MQTT_ERR_SUCCESS or
+                (not self._connected and time.monotonic() > acknowledgment_deadline)) and not self.stopped():
                 logger.log_error("MQTT loop returned error %s", rc)
                 self._connected = False
+                self._session_open = False
                 self._client.disconnect()
-                if self._status_callback:
-                    self._status_callback(False)
+                self.connection_state.emit(False)
+                self.interruptible_wait(2.0)
 
         if self._connected:
             try:
@@ -146,8 +157,7 @@ class MqttWorkerThread(ReceiverThread):
             except Exception:
                 pass
 
-        if self._status_callback:
-            self._status_callback(False)
+        self.connection_state.emit(False)
         logger.log_info("MQTT worker thread stopped")
 
     def send_response(self, response: bytes) -> None:
@@ -162,6 +172,7 @@ class MqttWorkerThread(ReceiverThread):
             logger.log_error("MQTT publish failed with rc=%s", result.rc)
 
     def stop(self) -> None:
+        super().stop()
         try:
             self._client.disconnect()
         except Exception:
@@ -176,29 +187,35 @@ class MqttWorkerThread(ReceiverThread):
         return True
 
     # MQTT callbacks -------------------------------------------------
-    def _on_connect(self, client, userdata, flags, rc):  # pylint: disable=unused-argument
+    def _on_connect(self, client, userdata, flags, rc, properties):  # pylint: disable=unused-argument
         if rc == 0:
             logger.log_info("MQTT connected to %s:%s", self._host, self._port)
             self._connected = True
-            if self._status_callback:
-                self._status_callback(True)
+            self.connection_state.emit(True)
             for topic in self._rx_topics:
                 if topic:
                     client.subscribe(topic, qos=self._qos)
         else:
             logger.log_error("MQTT connection refused rc=%s", rc)
 
-    def _on_disconnect(self, client, userdata, rc):  # pylint: disable=unused-argument
-        if self._status_callback:
-            self._status_callback(False)
+    def _on_disconnect(self, client, userdata, flags, rc, properties):  # pylint: disable=unused-argument
+        self.connection_state.emit(False)
         if self.stopped():
             logger.log_info("MQTT disconnected")
         else:
             logger.log_warning("MQTT unexpected disconnect rc=%s", rc)
         self._connected = False
+        self._session_open = False
 
     def _on_message(self, client, userdata, message):  # pylint: disable=unused-argument
-        plotter_lines = _extract_plotter_payload_lines(message.payload)
+        if len(message.payload) > 65536:
+            self.new_data.emit(message.payload)  # The bounded ingress counts/rejects it.
+            return
+        try:
+            plotter_lines = _extract_plotter_payload_lines(message.payload)
+        except (ValueError, RecursionError, UnicodeError):
+            self.new_data.emit(message.payload)
+            return
         if plotter_lines:
             for line in plotter_lines:
                 self.new_data.emit(line)
@@ -249,16 +266,14 @@ class MqttReceiver(Receiver):
                 username=self._settings.get("username"),
                 password=self._settings.get("password"),
                 tx_topic=self._settings.get("tx_topic"),
-                status_callback=self._on_worker_status,
+
             )
             self.attach_thread(worker)
 
         return True
 
     def close_connection(self) -> None:
-        if self.receiver_thread and self.receiver_thread.isRunning():
-            self.receiver_thread.stop_event.emit()
-            self.receiver_thread.wait()
+        self._stop_worker()
         self.detach_thread()
         self._set_connected(False)
 

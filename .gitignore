@@ -49,3 +49,11 @@ Thumbs.db
 *.wmv
 
 *.autosave
+
+# Local verification/environment state
+.venv/
+__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
+.superpowers/
