@@ -26,12 +26,11 @@ ListModel {
      * @param interfaceType - Interface type (Serial, MQTT, Telnet, Test)
      * @param dataId - Data ID (0-255) from the protocol
      * @param interfaceSettings - Interface-specific settings object
-     * @param seriesRef - Reference to Qt Charts series object
      * @param chartId - ID of the chart this line belongs to (e.g., "main", "test_float_123")
      * @param chartTitle - Title of the chart this line belongs to (e.g., "Main Chart", "Test Chart")
      * @param valueField - Optional mapping field for time-series lines ("x" or "y")
      */
-    function addLine(uniqueId, displayName, color, interfaceType, dataId, interfaceSettings, seriesRef, chartId, chartTitle, valueField) {
+    function addLine(uniqueId, displayName, color, interfaceType, dataId, interfaceSettings, chartId, chartTitle, valueField) {
         var safeChartId = chartId || "main"
         var lineKey = buildLineKey(uniqueId, safeChartId, valueField)
 
@@ -50,7 +49,6 @@ ListModel {
             "dataId": dataId,
             "interfaceSettings": interfaceSettings || {},
             "visible": true,
-            "seriesRef": seriesRef || null,
             "chartId": safeChartId,
             "chartTitle": chartTitle || "Main Chart",
             "valueField": valueField !== undefined ? valueField : null
@@ -219,11 +217,6 @@ ListModel {
 
         setProperty(index, "visible", newVisibility)
 
-        // Update series visibility if series reference exists
-        if (line.seriesRef) {
-            line.seriesRef.visible = newVisibility
-        }
-
         modelChanged()
         Logger.log_debug("ChartLineModel: Toggled visibility of " + lineKey + " to " + newVisibility)
         return true
@@ -231,24 +224,6 @@ ListModel {
 
     function toggleVisibilityForChart(uniqueId, chartId, visible, valueField) {
         return toggleVisibility(buildLineKey(uniqueId, chartId, valueField), visible)
-    }
-
-    /**
-     * Set series reference for a chart line
-     *
-     * @param lineKey - Unique key of the line instance
-     * @param seriesRef - Reference to Qt Charts series object
-     */
-    function setSeriesRef(lineKey, seriesRef) {
-        var index = getLineIndexByKey(lineKey)
-        if (index === -1) {
-            return false
-        }
-
-        setProperty(index, "seriesRef", seriesRef)
-        modelChanged()
-        Logger.log_debug("ChartLineModel: Set series reference for " + lineKey)
-        return true
     }
 
     /**

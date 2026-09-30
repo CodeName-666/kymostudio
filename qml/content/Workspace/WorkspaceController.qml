@@ -419,7 +419,7 @@ QtObject {
             if (assignedCount >= 64) { warn("Maximal 64 Kurven pro Diagramm."); continue }
             var title = chartTitleForId(target.chartId)
             var modelName = _lineDisplayName(base.displayName, target.valueField)
-            chartLineModel.addLine(uniqueId, modelName, base.color, base.interfaceType, base.dataId, base.interfaceSettings, null, target.chartId, title, target.valueField)
+            chartLineModel.addLine(uniqueId, modelName, base.color, base.interfaceType, base.dataId, base.interfaceSettings, target.chartId, title, target.valueField)
             var line = chartLineModel.getLineForChart(uniqueId, target.chartId, target.valueField)
             var window = root._windows[target.chartId]
             if (window && line) _materializeLine(window, line)
