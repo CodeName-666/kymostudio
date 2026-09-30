@@ -24,7 +24,7 @@ QML_CONTENT = PROJECT_ROOT / "qml" / "content"
 if str(PYTHON_ROOT) not in sys.path:
     sys.path.insert(0, str(PYTHON_ROOT))
 
-from Backend.backend import Backend, ConnectionInfo, _GraphBuffer  # noqa: E402
+from Backend.backend import Backend, ConnectionInfo  # noqa: E402
 
 
 class BackendConnectionCleanupTests(unittest.TestCase):
@@ -40,7 +40,6 @@ class BackendConnectionCleanupTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.backend._batch_timer.stop()
         self.backend._Backend__com_updater_timer.stop()
-        self.backend._Backend__scroll_timer.stop()
         Backend._Backend__backend_instance = None
 
     def test_delete_connection_clears_every_signal_state_and_notifies_qml(self) -> None:
@@ -56,9 +55,6 @@ class BackendConnectionCleanupTests(unittest.TestCase):
         )
 
         self.backend._graph_state.update({removed_id: {}, kept_id: {}})
-        self.backend._Backend__graph_list.update(
-            {removed_id: _GraphBuffer(), kept_id: _GraphBuffer()}
-        )
         self.backend._point_buffer.update({removed_id: [(1, 2, 3, True)], kept_id: []})
         self.backend._point_buffer_3d.update({removed_id: [(1, 2, 3)], kept_id: []})
         self.backend._last_emit_time.update({removed_id: 1.0, kept_id: 2.0})
@@ -80,7 +76,6 @@ class BackendConnectionCleanupTests(unittest.TestCase):
 
         for state in (
             self.backend._graph_state,
-            self.backend._Backend__graph_list,
             self.backend._point_buffer,
             self.backend._point_buffer_3d,
             self.backend._last_emit_time,

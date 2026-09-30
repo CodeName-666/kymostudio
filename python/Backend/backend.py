@@ -5,12 +5,10 @@ import math
 import time
 from collections import deque
 from copy import deepcopy
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-from PySide6 import QtCharts
-from PySide6.QtCore import QObject, Slot, Signal, QTimer, Property, QRectF
+from PySide6.QtCore import QObject, Slot, Signal, QTimer, Property
 from PySide6.QtQml import QJSValue
 from serial.tools import list_ports
 
@@ -35,10 +33,6 @@ def _get_serial_ports() -> List[str]:
     return [port.name for port in ports]
 
 
-@dataclass
-class _GraphBuffer:
-    series: Optional[QtCharts.QLineSeries] = None
-    pending_points: List[Tuple[float, float]] = field(default_factory=list)
 
 
 
@@ -121,15 +115,6 @@ class Backend(QObject):
             self._emit_connection_status_changed, self._notify_status)
         self.__connections = self._connection_service.connections
 
-        # Chart helpers
-        self.__graph_list: Dict[str, _GraphBuffer] = {}
-        self.__plot_area = QRectF()
-        self.__chart: Optional[QtCharts.QChart] = None
-        self.__xAxis: Optional[QtCharts.QValueAxis] = None
-        self.__yAxis: Optional[QtCharts.QValueAxis] = None
-        self.__xPoint = 0.0
-        self.__scroll_step = 5
-
         # Performance optimization: Batch updates
         self._frames_2d = FrameBuffer(self._max_pending_points)
         self._frames_3d = FrameBuffer(self._max_pending_points)
@@ -139,7 +124,6 @@ class Backend(QObject):
         self._batch_timer.timeout.connect(self._flush_point_buffer)
         self._batch_timer.start(33)  # Display clock, independent of acquisition rate.
         self._batch_size = 4096  # Upper bound on points per series/frame.
-        self._batch_enabled = True  # Enable batching by default
 
         # Message registry (UI table) - throttle updates to the same batch timer
         self._message_state: Dict[str, Dict[str, Any]] = {}
@@ -155,12 +139,6 @@ class Backend(QObject):
         self.__com_list: List[str] = []
         self.__com_updater_timer.timeout.connect(self._update_com_ports)
         self.__com_updater_timer.start(1000)
-
-        # Auto-scroll timer for charts
-        self.__scroll_timer = QTimer(self)
-        self.__scroll_timer.timeout.connect(self._on_scroll_timer)
-        self.__auto_scroll_enabled = False  # Disabled by default for better performance
-        # Don't start timer by default - will be started when enabled
 
         # Signal wiring to forward into QML event bridge
         self.backend_setup_done_changed.connect(self.on_backend_setup_done)
@@ -222,32 +200,6 @@ class Backend(QObject):
             self.__ui_setup_done = status
             self.ui_setup_done_changed.emit(status)
 
-    @Property(QRectF)
-    def plot_area(self) -> QRectF:
-        return self.__plot_area
-
-    @plot_area.setter
-    def plot_area(self, area: QRectF) -> None:
-        self.__plot_area = area
-
-    @Property(QObject)
-    def xAxis(self) -> QtCharts.QValueAxis:
-        """Expose the X axis as QObject to keep the meta type valid."""
-        return self.__xAxis if self.__xAxis else QtCharts.QValueAxis()
-
-    @xAxis.setter
-    def xAxis(self, new_x_axis: QObject) -> None:
-        self.__xAxis = new_x_axis if isinstance(new_x_axis, QtCharts.QValueAxis) else None
-
-    @Property(QObject)
-    def yAxis(self) -> QtCharts.QValueAxis:
-        """Expose the Y axis as QObject to keep the meta type valid."""
-        return self.__yAxis if self.__yAxis else QtCharts.QValueAxis()
-
-    @yAxis.setter
-    def yAxis(self, new_y_axis: QObject) -> None:
-        self.__yAxis = new_y_axis if isinstance(new_y_axis, QtCharts.QValueAxis) else None
-
     # ------------------------------------------------------------------ #
     # Public API used from QML/receivers
     # ------------------------------------------------------------------ #
@@ -265,7 +217,6 @@ class Backend(QObject):
         self.set_downsample_target_hz(float(performance.get("downsample_target_hz", 1000.0)))
         self.ui_config = config.get("qml", {})
         self.__interfaces_config = parse_interface_definitions(config.get("interfaces", []))
-        self.__scroll_step = config.get("scroll_step", self.__scroll_step)
         self._graph_state.clear()
         self._chart_line_overrides.clear()
 
@@ -373,40 +324,6 @@ class Backend(QObject):
     def log_stack(self, stack_info: str) -> None:
         Logger.get_instance().log_qml_stack(stack_info)
 
-    # Chart helpers used from QML
-    @Slot(str, QObject, result=bool)
-    def add_graph(self, name: str, graph: QtCharts.QLineSeries) -> bool:
-        buffer = self.__graph_list.setdefault(name, _GraphBuffer())
-        buffer.series = graph
-        if buffer.pending_points:
-            for x_val, y_val in buffer.pending_points:
-                buffer.series.append(x_val, y_val)
-            buffer.pending_points.clear()
-        return True
-
-    @Slot(QRectF)
-    def set_plot_area(self, area: QRectF) -> None:
-        self.plot_area = area
-
-    @Slot(QObject, QObject)
-    def set_axis(self, x_axis: QObject, y_axis: QObject) -> None:
-        self.xAxis = x_axis
-        self.yAxis = y_axis
-
-    @Slot(str, QObject, result=bool)
-    def append_graph_point(self, graph_name: str, point: Tuple) -> bool:
-        if not point:
-            return False
-        buffer = self.__graph_list.get(graph_name)
-        if buffer is None or buffer.series is None:
-            return False
-        try:
-            x_val, y_val = point
-        except (ValueError, TypeError):
-            return False
-        buffer.series.append(x_val, y_val)
-        return True
-
     @Slot(str, result=bool)
     def remove_chart_line(self, unique_id: str) -> bool:
         """Remove a chart line from the backend.
@@ -421,11 +338,6 @@ class Backend(QObject):
         if unique_id in self._graph_state:
             del self._graph_state[unique_id]
             logger.log_info(f"Removed chart line from state: {unique_id}")
-
-        # Remove from graph list (series buffer)
-        if unique_id in self.__graph_list:
-            del self.__graph_list[unique_id]
-            logger.log_info(f"Removed chart line series: {unique_id}")
 
         self._chart_line_overrides.pop(unique_id, None)
 
@@ -603,38 +515,19 @@ class Backend(QObject):
             t=time_value, x=data_point.x, y=float(data_point.value), z=data_point.z_value,
             timestamp=data_point.timestamp, rx_time=now))
 
-        # Send point to QML - use batching for better performance
-        if self._batch_enabled or self._display_paused:
-            self._buffer_point(
-                unique_id,
-                x_value,
-                float(data_point.value),
-                time_value,
-                getattr(data_point, "x", None) is not None,
-            )
-        else:
-            # Legacy: direct send (slower)
-            point = {
-                "x": x_value,
-                "y": float(data_point.value),
-                "t": time_value,
-                "hasExplicitX": getattr(data_point, "x", None) is not None,
-                "timestamp": float(data_point.timestamp) if data_point.timestamp is not None else None,
-                "z": float(data_point.z_value) if getattr(data_point, "z_value", None) is not None else None,
-            }
-            self._queue_event("append_graph_point", unique_id, point)
+        # Points reach QML in frame batches on the display clock.
+        self._buffer_point(
+            unique_id,
+            x_value,
+            float(data_point.value),
+            time_value,
+            getattr(data_point, "x", None) is not None,
+        )
 
         # 3D charts (XYZ): emit dedicated events when Z is present
         if getattr(data_point, "z_value", None) is not None:
             z_value = float(data_point.z_value)  # type: ignore[arg-type]
-            if self._batch_enabled or self._display_paused:
-                self._buffer_point_3d(unique_id, x_value, float(data_point.value), z_value)
-            else:
-                self._queue_event(
-                    "append_graph_point_3d",
-                    unique_id,
-                    {"x": x_value, "y": float(data_point.value), "z": z_value},
-                )
+            self._buffer_point_3d(unique_id, x_value, float(data_point.value), z_value)
 
     def _parse_data_point(self, interface: str, payload: bytes) -> PlotDataPoint | None:
         """Parse without coupling wire validation to Qt; rate-limit error reporting."""
@@ -672,12 +565,6 @@ class Backend(QObject):
 
     def _forward_com_port_update(self, ports) -> None:
         self._queue_event("com_port_update", ports)
-
-    def _on_scroll_timer(self) -> None:
-        if not self.__auto_scroll_enabled or self._backend_events is None:
-            return
-        self.__xPoint += self.__scroll_step
-        self._queue_event("scrollRight", self.__scroll_step)
 
     def _queue_event(self, signal_name: str, *args) -> None:
         if self._emit_event(signal_name, *args):
@@ -977,7 +864,6 @@ class Backend(QObject):
         self._connection_service._requested.clear()
         self.__connection_counter = 0
         self._graph_state.clear()
-        self.__graph_list.clear()
         self._last_emit_time.clear()
         self._chart_line_overrides.clear()
         self._ignored_signals.clear()
@@ -1024,7 +910,7 @@ class Backend(QObject):
         if info.receiver is not None and hasattr(info.receiver, "deleteLater"):
             info.receiver.deleteLater()
         prefix = connection_id + "_"
-        mappings = (self._graph_state, self.__graph_list, self._point_buffer,
+        mappings = (self._graph_state, self._point_buffer,
                     self._point_buffer_3d, self._last_emit_time, self._message_state,
                     self._chart_line_overrides, self._last_rx_monotonic)
         removed = {key for state in mappings for key in state if key.startswith(prefix)}
@@ -1319,7 +1205,6 @@ class Backend(QObject):
             return False
         self._batch_timer.stop()
         self.__com_updater_timer.stop()
-        self.__scroll_timer.stop()
         return True
 
     @Slot("QJSValue", result=bool)

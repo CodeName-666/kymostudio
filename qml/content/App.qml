@@ -20,7 +20,6 @@ AppUi {
     Component.onCompleted: {
         Logger.log_info("App: Component.onCompleted - Initializing application")
         appController = App.create()
-        Logger.log_debug("App: appController created, initial current_interface: " + appController.current_interface)
 
         var selectedBackend = null
         if(typeof Backend !== 'undefined')

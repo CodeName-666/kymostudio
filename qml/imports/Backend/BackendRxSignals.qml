@@ -10,7 +10,6 @@ QtObject {
     // High-level message update (for Messages table / inspection)
     signal message_received(var message)
     signal signals_removed(var uniqueIds)
-    signal scrollRight(var pixel)
     signal com_port_update(var portList)
     signal ui_setup(var settings)
     signal status_message(var level, var message)

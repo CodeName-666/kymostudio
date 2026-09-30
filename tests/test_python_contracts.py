@@ -72,7 +72,6 @@ class BackendCompatibilityTests(unittest.TestCase):
                 connection.receiver.stop()
         self.backend._batch_timer.stop()
         self.backend._Backend__com_updater_timer.stop()
-        self.backend._Backend__scroll_timer.stop()
         Backend._Backend__backend_instance = None
 
     def test_settings_are_copied_and_validated_per_interface(self) -> None:
