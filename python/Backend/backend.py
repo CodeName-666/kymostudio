@@ -251,83 +251,6 @@ class Backend(QObject):
     # ------------------------------------------------------------------ #
     # Public API used from QML/receivers
     # ------------------------------------------------------------------ #
-    def connect_signals(self) -> None:
-        """Kept for backward compatibility."""
-        self.backend_setup_done_changed.connect(self.on_backend_setup_done)
-
-    @Slot(str, result="bool")
-    def connectTo(self, connection_type: str) -> bool:
-        """Legacy method - now forwards to connection-based system.
-
-        This method is deprecated and kept for backward compatibility.
-        Use start_connection() with a specific connection_id instead.
-        """
-        # Find first connection of this type
-        for conn_id, conn_info in self.__connections.items():
-            if conn_info.interface_type == connection_type:
-                return self.start_connection(conn_id)
-
-        self._notify_status("error", f"No connection found for type: {connection_type}")
-        return False
-
-    @Slot(result="bool")
-    def connect_selected(self) -> bool:
-        """Start the connection selected through the legacy settings API.
-
-        Older QML components first assign ``interface`` and then call this
-        no-argument method.  If no interface was selected, a single configured
-        connection is unambiguous and can safely be started.
-        """
-        if self.__interface:
-            return self.connectTo(self.__interface)
-
-        if len(self.__connections) == 1:
-            return self.start_connection(next(iter(self.__connections)))
-
-        self._notify_status(
-            "error",
-            "Select an interface before connecting" if self.__connections else "No connection configured",
-        )
-        return False
-
-    @Slot(result="bool")
-    def is_connect(self) -> bool:
-        """Return whether the selected (or any) connection is active."""
-        connections = self.__connections.values()
-        if self.__interface:
-            connections = (
-                item for item in connections if item.interface_type == self.__interface
-            )
-        return any(item.status != "disconnected" for item in connections)
-
-    @Slot(result="bool")
-    def connected(self) -> bool:
-        """Compatibility alias used by the original BackendProvider."""
-        return self.is_connect()
-
-    @Slot(str, result="bool")
-    def disconnectFrom(self, connection_type: str) -> bool:
-        """Legacy counterpart to connectTo for reusable QML controls."""
-        matching_connections = [
-            (connection_id, connection)
-            for connection_id, connection in self.__connections.items()
-            if connection.interface_type == connection_type
-        ]
-        if not matching_connections:
-            self._notify_status("error", f"No connection found for type: {connection_type}")
-            return False
-
-        # Prefer the active connection when multiple instances share a type.
-        connection_id, _ = next(
-            (
-                item
-                for item in matching_connections
-                if item[1].status != "disconnected"
-            ),
-            matching_connections[0],
-        )
-        return self.stop_connection(connection_id)
-
     def config(self, config: dict) -> None:
         if not config:
             logger.log_error("Backend configuration missing")
@@ -422,13 +345,6 @@ class Backend(QObject):
             return {}
         return deepcopy(settings)
 
-    @Slot(result="QVariant")
-    def get_ui_config(self):
-        try:
-            return self.ui_config
-        except AttributeError:
-            return {}
-
     @Slot(QObject, QObject)
     def setup(self, ui_handle: QObject, backend_events: QObject) -> None:
         self._ui_handle = ui_handle
@@ -467,10 +383,6 @@ class Backend(QObject):
                 buffer.series.append(x_val, y_val)
             buffer.pending_points.clear()
         return True
-
-    @Slot(QObject)
-    def set_chart(self, chart: QtCharts.QChart) -> None:
-        self.__chart = chart
 
     @Slot(QRectF)
     def set_plot_area(self, area: QRectF) -> None:
@@ -531,11 +443,6 @@ class Backend(QObject):
             self.remove_chart_line(unique_id)
         else:
             self._ignored_signals.discard(unique_id)
-
-    @Slot(result="QVariant")
-    def get_ignored_signals(self) -> List[str]:
-        """Return ignored signal unique_ids."""
-        return sorted(self._ignored_signals)
 
     @Slot(str, str, str, result=bool)
     def update_chart_line(self, unique_id: str, display_name: str, color: str) -> bool:
@@ -729,17 +636,6 @@ class Backend(QObject):
                     {"x": x_value, "y": float(data_point.value), "z": z_value},
                 )
 
-    @Slot(result="QVariant")
-    def get_test_signal_templates(self) -> List[Dict[str, Any]]:
-        """Return the well-known Test interface signal templates (2D).
-
-        Each item contains:
-          - dataId: int
-          - displayName: str
-          - color: str
-        """
-        return [tpl.copy() for tpl in self._TEST_SIGNAL_TEMPLATES]
-
     def _parse_data_point(self, interface: str, payload: bytes) -> PlotDataPoint | None:
         """Parse without coupling wire validation to Qt; rate-limit error reporting."""
         try:
@@ -892,44 +788,9 @@ class Backend(QObject):
 
         self._dirty_messages.clear()
 
-    @Slot(bool)
-    def set_batch_enabled(self, enabled: bool) -> None:
-        """Enable or disable batch updates.
-
-        Args:
-            enabled: True to enable batching (better performance), False for immediate updates
-        """
-        self._batch_enabled = enabled
-        logger.log_info(f"Batch updates {'enabled' if enabled else 'disabled'}")
-
-        # If disabling, flush remaining buffers
-        if not enabled:
-            self._flush_point_buffer()
-
-    @Slot(int)
-    def set_batch_size(self, size: int) -> None:
-        """Maximum points delivered per signal/frame; never an immediate-flush trigger."""
-        self._batch_size = max(64, min(4096, size))
-
     @Slot(int)
     def set_batch_interval(self, interval_ms: int) -> None:
         self._batch_timer.setInterval(max(16, min(500, interval_ms)))
-
-    @Slot(bool)
-    def set_auto_scroll_enabled(self, enabled: bool) -> None:
-        """Enable or disable automatic chart scrolling.
-
-        Args:
-            enabled: True to enable auto-scroll, False to disable
-        """
-        self.__auto_scroll_enabled = enabled
-        if enabled:
-            if not self.__scroll_timer.isActive():
-                self.__scroll_timer.start(1000)
-            logger.log_info("Auto-scroll enabled")
-        else:
-            self.__scroll_timer.stop()
-            logger.log_info("Auto-scroll disabled")
 
     @Slot(bool)
     def set_downsample_enabled(self, enabled: bool) -> None:
@@ -1010,15 +871,6 @@ class Backend(QObject):
         logger.log_debug(f"Loaded default template for {interface}: {default_config}")
         return default_config
 
-    @Slot(result="QVariant")
-    def get_available_interface_types(self) -> List[str]:
-        """Get list of all available interface types.
-
-        Returns:
-            List of interface type names (e.g., ["Serial", "Telnet", "MQTT", "Test"])
-        """
-        return list(self.__default_templates.keys())
-
     @Slot(str, result="QVariant")
     def get_default_template(self, interface_type: str) -> Dict[str, Any]:
         """Get the default template for a specific interface type.
@@ -1032,18 +884,6 @@ class Backend(QObject):
             Dictionary with default template settings
         """
         return self.get_interface_config(interface_type)
-
-    @Slot()
-    def save_settings_to_config(self) -> bool:
-        """Save current default templates to config.json.
-
-        This saves the default templates that will be used when creating new connections.
-        Individual connection settings are saved separately via _save_connections_to_config().
-
-        Returns:
-            True if saved successfully, False otherwise
-        """
-        return self._save_templates_to_config()
 
     @Slot(str, result=bool)
     def save_configuration_to_file(self, file_url: str) -> bool:
@@ -1145,30 +985,6 @@ class Backend(QObject):
         self.clear_measurements()
         if removed_signal_ids:
             self._queue_event("signals_removed", sorted(removed_signal_ids))
-
-    @Slot(str, "QVariant", result=bool)
-    def save_preset(self, file_url: str, preset: Dict[str, Any]) -> bool:
-        try:
-            atomic_json_write(local_path(file_url), self._settings_dict(preset))
-            return True
-        except (OSError, TypeError, ValueError) as exc:
-            self._notify_status("error", f"Preset not saved: {exc}")
-            return False
-
-    @Slot(str, result="QVariant")
-    def load_preset(self, file_url: str) -> Dict[str, Any]:
-        try:
-            path = local_path(file_url)
-            if path.stat().st_size > MAX_CONFIGURATION_BYTES:
-                raise ValueError("Preset exceeds 4 MiB")
-            with path.open(encoding="utf-8-sig") as stream:
-                value = json.load(stream)
-            if not isinstance(value, dict):
-                raise ValueError("Preset root must be an object")
-            return value
-        except (OSError, TypeError, ValueError, RecursionError) as exc:
-            self._notify_status("error", f"Preset not loaded: {exc}")
-            return {}
 
     # ------------------------------------------------------------------ #
     # Multi-Connection Management API

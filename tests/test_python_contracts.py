@@ -35,7 +35,7 @@ from Backend.Charts import (  # noqa: E402
     XYScatterChart,
     XYZScatterChart,
 )
-from Backend.backend import Backend, ConnectionInfo  # noqa: E402
+from Backend.backend import Backend  # noqa: E402
 from Receiver.can_receiver import (  # noqa: E402
     CanReceiver,
     can_message_to_plotter_payload,
@@ -47,7 +47,6 @@ from Receiver.connections.serial_connection import SerialConnection  # noqa: E40
 from Receiver.connections.telnet_client_connection import TelnetClientConnection  # noqa: E402
 from Receiver.connections.telnet_server_connection import TelnetServerConnection  # noqa: E402
 from Receiver.registry import ReceiverRegistry  # noqa: E402
-from Receiver.test_receiver import TestReceiver as SyntheticReceiver  # noqa: E402
 from Core.paths import user_config_path
 from Logger.logger import Logger, log_info  # noqa: E402
 
@@ -82,7 +81,7 @@ class BackendCompatibilityTests(unittest.TestCase):
         self.backend._Backend__scroll_timer.stop()
         Backend._Backend__backend_instance = None
 
-    def test_legacy_provider_methods_use_the_current_interface(self) -> None:
+    def test_settings_are_copied_and_validated_per_interface(self) -> None:
         settings = self.backend.get_settings("Test")
         settings["sample_ms"] = 999
         self.assertEqual(self.backend.get_settings("Test")["sample_ms"], 50)
@@ -91,21 +90,6 @@ class BackendCompatibilityTests(unittest.TestCase):
         self.assertTrue(self.backend.settings_valid())
         self.assertTrue(self.backend.settings_valid("Test"))
         self.assertFalse(self.backend.settings_valid("Unknown"))
-
-        receiver = SyntheticReceiver({"type": "Sinus", "sample_ms": 50})
-        self.backend._Backend__connections["test-1"] = ConnectionInfo(
-            connection_id="test-1",
-            interface_type="Test",
-            display_name="Compatibility Test",
-            status="disconnected",
-            receiver=receiver,
-        )
-
-        self.assertTrue(self.backend.connect_selected())
-        self.assertTrue(self.backend.is_connect())
-        self.assertTrue(self.backend.connected())
-        self.assertTrue(self.backend.disconnectFrom("Test"))
-        self.assertFalse(self.backend.connected())
 
     def test_persistent_config_path_is_independent_of_working_directory(self) -> None:
         config_path = Path(self.backend._Backend__config_path)

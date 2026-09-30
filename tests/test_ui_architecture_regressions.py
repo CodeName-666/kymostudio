@@ -121,35 +121,6 @@ class BackendConnectionCleanupTests(unittest.TestCase):
         self.assertEqual(emitted[0][2], [[1.0, 2.0, 3.0, True]])
         self.assertEqual(emitted[1][2], [[4.0, 5.0, 6.0]])
 
-    def test_legacy_disconnect_stops_the_active_connection_of_selected_type(self) -> None:
-        receiver = Mock()
-        self.backend._Backend__connections.update(
-            {
-                "Test_1_1": ConnectionInfo(
-                    connection_id="Test_1_1",
-                    interface_type="Test",
-                    display_name="Inactive",
-                    status="disconnected",
-                    receiver=Mock(),
-                ),
-                "Test_2_2": ConnectionInfo(
-                    connection_id="Test_2_2",
-                    interface_type="Test",
-                    display_name="Active",
-                    status="connected",
-                    receiver=receiver,
-                ),
-            }
-        )
-
-        self.assertTrue(self.backend.disconnectFrom("Test"))
-
-        receiver.stop.assert_called_once_with()
-        self.assertEqual(
-            self.backend._Backend__connections["Test_2_2"].status,
-            "disconnected",
-        )
-
     def test_configuration_export_uses_the_selected_file_and_runtime_state(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)

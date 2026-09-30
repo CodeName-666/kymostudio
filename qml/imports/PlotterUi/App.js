@@ -86,8 +86,6 @@ class AppClass {
             return
         const b = this.used_backend_interface
         const tx = this.backend_tx_events
-        if(tx.connectTo && typeof b.connectTo === "function")
-            tx.connectTo.connect(function(connection_type){ b.connectTo(connection_type) })
         if(tx.set_settings && typeof b.set_settings === "function")
             tx.set_settings.connect(function(interface_type, settings){ b.set_settings(interface_type, settings) })
         if(tx.set_plot_area && typeof b.set_plot_area === "function")
@@ -103,60 +101,6 @@ class AppClass {
         return this.backend_events
     }
 
-    connect()
-    {
-        if(!this.used_backend_interface)
-        {
-            console.warn("AppController: No backend available for connect()")
-            return false
-        }
-        var connection_type = this.current_interface !== undefined ? this.current_interface : ""
-        console.log("AppController: Attempting to connect with interface:", connection_type)
-
-        if(!connection_type || connection_type === "")
-        {
-            console.error("AppController: No interface selected! current_interface is:", this.current_interface)
-            return false
-        }
-
-        if(this.backend_tx_events && this.backend_tx_events.connectTo)
-        {
-            console.log("AppController: Calling backend_tx_events.connectTo with:", connection_type)
-            this.backend_tx_events.connectTo(connection_type)
-            return true
-        }
-        if(typeof this.used_backend_interface.connectTo === "function")
-        {
-            console.log("AppController: Calling used_backend_interface.connectTo with:", connection_type)
-            return this.used_backend_interface.connectTo(connection_type)
-        }
-        if(typeof this.used_backend_interface.connect === "function")
-        {
-            console.log("AppController: Calling used_backend_interface.connect()")
-            return this.used_backend_interface.connect()
-        }
-        console.warn("AppController: Backend does not implement connect/connectTo")
-        return false
-    }
-
-    disconnect()
-    {
-        if(!this.used_backend_interface)
-        {
-            console.warn("AppController: No backend available for disconnect()")
-            return false
-        }
-        var connection_type = this.current_interface !== undefined ? this.current_interface : ""
-        if(!connection_type || connection_type === "")
-        {
-            console.error("AppController: No interface selected for disconnect()")
-            return false
-        }
-        if(typeof this.used_backend_interface.disconnectFrom === "function")
-            return this.used_backend_interface.disconnectFrom(connection_type)
-        console.warn("AppController: Backend does not implement disconnectFrom")
-        return false
-    }
 
     set_settings(interface_type, settings)
     {
