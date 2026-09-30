@@ -1,135 +1,76 @@
 import QtQuick 6.4
 import QtQuick.Controls 6.4
-import QtQuick.Layouts 1.15
+import QtQuick.Layouts 6.4
+import Theme 1.0
+import "../../Workbench"
 
-ScrollView {
+/** CAN source settings. Keys: interface, channel, bitrate, value_format, scale, offset, data_id?, tx_id?. */
+ColumnLayout {
     id: root
+    spacing: 20
 
-    clip: true
-    contentWidth: availableWidth
-
-    ColumnLayout {
-        width: root.availableWidth
-        spacing: 12
-
-        Label {
-            text: qsTr("CAN-Treiber") + " *"
-            color: AppTheme.text.primary
-            font.bold: true
-        }
-
-        ComboBox {
-            id: interfaceCombo
-            Layout.fillWidth: true
-            editable: true
-            model: ["virtual", "socketcan", "pcan", "vector", "kvaser", "ixxat", "slcan"]
-            currentIndex: 0
-        }
-
-        Label {
-            text: qsTr("Kanal") + " *"
-            color: AppTheme.text.primary
-            font.bold: true
-        }
-
-        TextField {
-            id: channelField
-            Layout.fillWidth: true
-            text: "plotter"
-            placeholderText: qsTr("z. B. can0, PCAN_USBBUS1 oder plotter")
-            color: AppTheme.text.primary
-        }
-
-        Label {
-            text: qsTr("Bitrate")
-            color: AppTheme.text.primary
-            font.bold: true
-        }
-
-        TextField {
-            id: bitrateField
-            Layout.fillWidth: true
-            text: "500000"
-            validator: IntValidator { bottom: 1 }
-            color: AppTheme.text.primary
-        }
-
-        Label {
-            text: qsTr("Nutzdatenformat")
-            color: AppTheme.text.primary
-            font.bold: true
-        }
-
-        ComboBox {
-            id: valueFormatCombo
-            Layout.fillWidth: true
-            model: [
-                "auto", "float32_le", "float32_be", "float64_le", "float64_be",
-                "uint_le", "uint_be", "int_le", "int_be"
-            ]
-        }
-
-        GridLayout {
-            Layout.fillWidth: true
-            columns: 2
-            columnSpacing: 8
-            rowSpacing: 6
-
-            Label { text: qsTr("Skalierung"); color: AppTheme.text.primary }
-            TextField {
-                id: scaleField
-                Layout.fillWidth: true
-                text: "1.0"
-                validator: DoubleValidator {}
-                color: AppTheme.text.primary
-            }
-
-            Label { text: qsTr("Offset"); color: AppTheme.text.primary }
-            TextField {
-                id: offsetField
-                Layout.fillWidth: true
-                text: "0.0"
-                validator: DoubleValidator {}
-                color: AppTheme.text.primary
-            }
-
-            Label { text: qsTr("Daten-ID (optional)"); color: AppTheme.text.primary }
-            TextField {
-                id: dataIdField
-                Layout.fillWidth: true
-                placeholderText: qsTr("Sonst CAN-ID modulo 256")
-                validator: IntValidator { bottom: 0; top: 255 }
-                color: AppTheme.text.primary
-            }
-
-            Label { text: qsTr("Sende-CAN-ID (optional)"); color: AppTheme.text.primary }
-            TextField {
-                id: txIdField
-                Layout.fillWidth: true
-                placeholderText: qsTr("z. B. 0x123")
-                color: AppTheme.text.primary
+    FormSection {
+        title: qsTr("Adapter")
+        FieldRow {
+            label: qsTr("Treiber")
+            required: true
+            ComboBox {
+                id: interfaceCombo
+                Layout.preferredWidth: 150
+                editable: true
+                model: ["virtual", "socketcan", "pcan", "vector", "kvaser", "ixxat", "slcan"]
+                Accessible.name: qsTr("CAN-Treiber")
             }
         }
-
-        Label {
-            Layout.fillWidth: true
-            text: qsTr("Auto dekodiert 4-Byte-Nutzdaten als Float32, 8-Byte-Nutzdaten als Float64 und andere Längen als vorzeichenlose Ganzzahlen.")
-            color: "#a0a0a0"
-            font.pixelSize: 10
-            wrapMode: Text.WordWrap
+        FieldRow {
+            label: qsTr("Kanal")
+            required: true
+            TextField { id: channelField; Layout.preferredWidth: 200; text: "plotter"; placeholderText: qsTr("can0, PCAN_USBBUS1 …"); selectByMouse: true; Accessible.name: qsTr("Kanal") }
         }
+        FieldRow {
+            label: qsTr("Bitrate")
+            TextField { id: bitrateField; Layout.preferredWidth: 100; text: "500000"; selectByMouse: true; Accessible.name: qsTr("Bitrate"); validator: IntValidator { bottom: 1 } }
+            Label { text: qsTr("Bit/s"); color: AppTheme.text.hint }
+        }
+    }
 
-        Item { Layout.fillHeight: true }
+    FormSection {
+        title: qsTr("Dekodierung")
+        FieldRow {
+            label: qsTr("Nutzdaten")
+            hint: qsTr("„auto“: 4 Byte als Float32, 8 Byte als Float64, andere Längen als vorzeichenlose Ganzzahl.")
+            ComboBox {
+                id: valueFormatCombo
+                Layout.preferredWidth: 150
+                model: ["auto", "float32_le", "float32_be", "float64_le", "float64_be", "uint_le", "uint_be", "int_le", "int_be"]
+                Accessible.name: qsTr("Nutzdatenformat")
+            }
+        }
+        FieldRow {
+            label: qsTr("Umrechnung")
+            hint: qsTr("Angezeigter Wert = Rohwert × Faktor + Offset")
+            Label { text: "×"; color: AppTheme.text.hint }
+            TextField { id: scaleField; Layout.preferredWidth: 80; text: "1.0"; selectByMouse: true; Accessible.name: qsTr("Faktor"); validator: DoubleValidator {} }
+            Label { text: "+"; color: AppTheme.text.hint }
+            TextField { id: offsetField; Layout.preferredWidth: 80; text: "0.0"; selectByMouse: true; Accessible.name: qsTr("Offset"); validator: DoubleValidator {} }
+        }
+        FieldRow {
+            label: qsTr("Daten-ID")
+            hint: qsTr("Optional; sonst CAN-ID modulo 256.")
+            TextField { id: dataIdField; Layout.preferredWidth: 80; placeholderText: qsTr("auto"); selectByMouse: true; Accessible.name: qsTr("Daten-ID"); validator: IntValidator { bottom: 0; top: 255 } }
+        }
+        FieldRow {
+            label: qsTr("Sende-CAN-ID")
+            TextField { id: txIdField; Layout.preferredWidth: 100; placeholderText: "0x123"; selectByMouse: true; Accessible.name: qsTr("Sende-CAN-ID") }
+            Label { text: qsTr("optional"); color: AppTheme.text.hint }
+        }
     }
 
     function loadDefaults(defaults) {
         var backendName = defaults.interface || defaults.bustype || "virtual"
         var backendIndex = interfaceCombo.find(backendName)
-        if (backendIndex >= 0)
-            interfaceCombo.currentIndex = backendIndex
-        else
-            interfaceCombo.editText = backendName
-
+        if (backendIndex >= 0) interfaceCombo.currentIndex = backendIndex
+        else interfaceCombo.editText = backendName
         if (defaults.channel !== undefined) channelField.text = defaults.channel.toString()
         if (defaults.bitrate !== undefined) bitrateField.text = defaults.bitrate.toString()
         if (defaults.value_format) {
@@ -144,7 +85,7 @@ ScrollView {
 
     function getSettings() {
         var settings = {
-            "interface": interfaceCombo.currentText.trim(),
+            "interface": interfaceCombo.editText.trim(),
             "channel": channelField.text.trim(),
             "bitrate": parseInt(bitrateField.text),
             "value_format": valueFormatCombo.currentText,

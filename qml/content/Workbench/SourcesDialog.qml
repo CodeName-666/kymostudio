@@ -4,7 +4,7 @@ import QtQuick.Layouts 6.4
 import Theme 1.0
 
 /** Data sources: list on the left, settings of the selected or new source on the right. */
-Dialog {
+WorkbenchDialog {
     id: root
     property var backend
     property string selectedId: ""
@@ -15,11 +15,9 @@ Dialog {
     property string formError: ""
     property var interfaceTypes: []
 
-    modal: true
-    padding: 0
+    title: qsTr("Quellen")
     width: Math.min(1000, parent ? parent.width - 64 : 1000)
-    height: Math.min(660, parent ? parent.height - 64 : 660)
-    closePolicy: Popup.CloseOnEscape
+    height: Math.min(680, parent ? parent.height - 64 : 680)
 
     readonly property var typeLabels: ({ Serial: qsTr("Seriell"), Telnet: qsTr("TCP"), MQTT: "MQTT", CAN: "CAN", Test: qsTr("Test") })
     readonly property var forms: ({ Serial: "SerialSettings.qml", MQTT: "MqttSettings.qml", Telnet: "TelnetSettings.qml", CAN: "CanSettings.qml", Test: "TestSettings.qml" })
@@ -121,24 +119,6 @@ Dialog {
         }
     }
 
-    background: Rectangle {
-        color: AppTheme.surfaces.dialog
-        border.color: AppTheme.borders.strong
-        radius: AppTheme.radius.extraLarge
-    }
-
-    header: Item {
-        implicitHeight: 56
-        RowLayout {
-            anchors.fill: parent
-            anchors.leftMargin: 20
-            anchors.rightMargin: 12
-            Label { text: qsTr("Quellen"); font.pixelSize: AppTheme.fontSize.large; font.weight: Font.DemiBold; Layout.fillWidth: true }
-            IconButton { iconName: "close"; tip: qsTr("Schließen"); onClicked: root.close() }
-        }
-        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: AppTheme.borders.primary }
-    }
-
     contentItem: RowLayout {
         spacing: 0
 
@@ -205,81 +185,101 @@ Dialog {
             Layout.fillHeight: true
             spacing: 0
 
-            ColumnLayout {
-                Layout.fillWidth: true
-                Layout.leftMargin: 24
-                Layout.rightMargin: 24
-                Layout.topMargin: 18
-                spacing: 14
-
-                Rectangle {
-                    readonly property string message: root.formError || (root.status === "error" ? (root.errors[root.selectedId] || qsTr("Verbindung fehlgeschlagen.")) : "")
-                    visible: message !== ""
-                    Layout.fillWidth: true
-                    implicitHeight: errorRow.implicitHeight + 20
-                    radius: AppTheme.radius.large
-                    color: AppTheme.tone.danger.bg
-                    border.color: AppTheme.tone.danger.border
-                    Accessible.role: Accessible.AlertMessage
-                    Accessible.name: message
-                    RowLayout {
-                        id: errorRow
-                        anchors.fill: parent
-                        anchors.margins: 10
-                        spacing: 10
-                        Icon { name: "error"; color: AppTheme.tone.danger.text; Layout.alignment: Qt.AlignTop }
-                        Label { text: parent.parent.message; color: AppTheme.tone.danger.text; wrapMode: Text.WordWrap; Layout.fillWidth: true }
-                    }
-                }
-
-                GridLayout {
-                    Layout.fillWidth: true
-                    columns: 2
-                    columnSpacing: 16
-                    rowSpacing: 6
-                    Label { text: qsTr("Name"); font.pixelSize: AppTheme.fontSize.small; color: AppTheme.text.secondary }
-                    Label { text: qsTr("Typ"); font.pixelSize: AppTheme.fontSize.small; color: AppTheme.text.secondary }
-                    TextField {
-                        id: nameField
-                        Layout.fillWidth: true
-                        placeholderText: qsTr("Leer lassen für automatischen Namen")
-                        Accessible.name: qsTr("Name der Quelle")
-                        selectByMouse: true
-                        maximumLength: 100
-                    }
-                    Segmented {
-                        accessibleName: qsTr("Typ der Quelle")
-                        enabled: root.creating
-                        options: root.interfaceTypes.map(function(t) { return { text: root.typeLabels[t.type] || t.type } })
-                        currentIndex: {
-                            for (var i = 0; i < root.interfaceTypes.length; i++) if (root.interfaceTypes[i].type === root.typeName) return i
-                            return -1
-                        }
-                        onActivated: function(index) { root.startNew(root.interfaceTypes[index].type) }
-                    }
-                }
-                RowLayout {
-                    visible: !root.creating
-                    spacing: 8
-                    Rectangle { width: 8; height: 8; radius: 4; color: root.statusColor(root.status) }
-                    Label { text: qsTr("Status: ") + root.statusText(root.status); color: AppTheme.text.secondary }
-                    Label { visible: !root.creating; text: qsTr("· Änderungen an einer laufenden Quelle starten sie neu."); color: AppTheme.text.hint; font.pixelSize: AppTheme.fontSize.small }
-                }
-                Caption { text: qsTr("Einstellungen") }
-            }
-
             ScrollView {
                 id: formScroll
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                Layout.leftMargin: 24
-                Layout.rightMargin: 12
-                Layout.topMargin: 8
                 clip: true
                 contentWidth: availableWidth
-                Loader {
-                    id: formLoader
-                    width: formScroll.availableWidth - 12
+
+                ColumnLayout {
+                    x: 24
+                    width: Math.min(640, formScroll.availableWidth - 48)
+                    spacing: 20
+
+                    Item { implicitHeight: 2 }
+
+                    Rectangle {
+                        readonly property string message: root.formError || (root.status === "error" ? (root.errors[root.selectedId] || qsTr("Verbindung fehlgeschlagen.")) : "")
+                        visible: message !== ""
+                        Layout.fillWidth: true
+                        implicitHeight: errorRow.implicitHeight + 20
+                        radius: AppTheme.radius.large
+                        color: AppTheme.tone.danger.bg
+                        border.color: AppTheme.tone.danger.border
+                        Accessible.role: Accessible.AlertMessage
+                        Accessible.name: message
+                        RowLayout {
+                            id: errorRow
+                            anchors.fill: parent
+                            anchors.margins: 10
+                            spacing: 10
+                            Icon { name: "error"; color: AppTheme.tone.danger.text; Layout.alignment: Qt.AlignTop }
+                            Label { text: parent.parent.message; color: AppTheme.tone.danger.text; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                        }
+                    }
+
+                    // New source: pick the type first.
+                    FormSection {
+                        visible: root.creating
+                        title: qsTr("Art der Quelle")
+                        SourceTypePicker {
+                            id: typePicker
+                            Layout.fillWidth: true
+                            types: root.interfaceTypes
+                            current: root.typeName
+                            onChosen: function(type) { root.startNew(type) }
+                        }
+                    }
+
+                    // Existing source: type and live status at a glance.
+                    RowLayout {
+                        visible: !root.creating
+                        spacing: 10
+                        Rectangle {
+                            implicitWidth: typeBadge.implicitWidth + 20
+                            implicitHeight: 26
+                            radius: 13
+                            color: AppTheme.surfaces.control
+                            border.color: AppTheme.borders.strong
+                            Row {
+                                id: typeBadge
+                                anchors.centerIn: parent
+                                spacing: 6
+                                Icon { name: typePicker.iconFor(root.typeName); size: 14; color: AppTheme.text.secondary; anchors.verticalCenter: parent.verticalCenter }
+                                Label { text: typePicker.label(root.typeName); font.pixelSize: AppTheme.fontSize.small; anchors.verticalCenter: parent.verticalCenter }
+                            }
+                        }
+                        Rectangle { width: 8; height: 8; radius: 4; color: root.statusColor(root.status) }
+                        Label { text: root.statusText(root.status); color: AppTheme.text.secondary }
+                        Label {
+                            text: qsTr("· Änderungen starten eine laufende Quelle neu.")
+                            color: AppTheme.text.hint
+                            font.pixelSize: AppTheme.fontSize.small
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+                    }
+
+                    FormSection {
+                        title: qsTr("Allgemein")
+                        FieldRow {
+                            label: qsTr("Name")
+                            hint: root.creating ? qsTr("Leer lassen für einen automatischen Namen.") : ""
+                            TextField {
+                                id: nameField
+                                Layout.preferredWidth: 280
+                                placeholderText: root.typeLabels[root.typeName] || qsTr("Name der Quelle")
+                                Accessible.name: qsTr("Name der Quelle")
+                                selectByMouse: true
+                                maximumLength: 100
+                            }
+                        }
+                    }
+
+                    Loader { id: formLoader; Layout.fillWidth: true }
+
+                    Item { implicitHeight: 12 }
                 }
             }
 

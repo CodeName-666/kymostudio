@@ -29,6 +29,15 @@ Rectangle {
     readonly property bool isTimeSeries: !!chart && chart.chartType === "time_series"
     readonly property var signalEntry: wc && selectedSignalId && wc.signalModel.count >= 0 ? wc.signalModel.getSignal(selectedSignalId) : null
     readonly property string mode: signalEntry ? "signal" : chart ? "chart" : "none"
+    readonly property int usageCount: {
+        if (!wc || !selectedSignalId || wc.assignmentRevision < 0) return 0
+        var n = 0
+        for (var i = 0; i < wc.availableCharts.length; i++)
+            if (wc.chartLineModel.hasLineForChart(selectedSignalId, wc.availableCharts[i].chartId, null)
+                || wc.chartLineModel.hasLineForChart(selectedSignalId, wc.availableCharts[i].chartId, "y")
+                || wc.chartLineModel.hasLineForChart(selectedSignalId, wc.availableCharts[i].chartId, "x")) n++
+        return n
+    }
 
     color: AppTheme.surfaces.panel
 
@@ -227,10 +236,20 @@ Rectangle {
                             Instantiator {
                                 model: root.wc ? root.wc.signalModel : null
                                 delegate: MenuItem {
+                                    id: pick
                                     required property string uniqueId
                                     required property string displayName
+                                    required property var color
+                                    readonly property bool onChart: root.wc.assignmentRevision >= 0 && root.wc.hasAssignedSignal(root.chartId, uniqueId)
                                     text: displayName
+                                    enabled: !onChart
                                     onTriggered: root.wc.assignSignal(uniqueId, root.chartId, root.isTimeSeries ? "y" : null)
+                                    contentItem: RowLayout {
+                                        spacing: 8
+                                        Rectangle { implicitWidth: 10; implicitHeight: 10; radius: 2; color: pick.color }
+                                        Label { text: pick.displayName; elide: Text.ElideRight; Layout.fillWidth: true; color: pick.enabled ? AppTheme.text.primary : AppTheme.text.disabled }
+                                        Label { visible: pick.onChart; text: qsTr("bereits drin"); font.pixelSize: AppTheme.fontSize.small; color: AppTheme.text.hint }
+                                    }
                                 }
                                 onObjectAdded: function(index, object) { addMenu.insertItem(index, object) }
                                 onObjectRemoved: function(index, object) { addMenu.removeItem(object) }
@@ -388,7 +407,14 @@ Rectangle {
                 spacing: 0
 
                 Section {
-                    Caption { text: qsTr("Verwendung") }
+                    RowLayout {
+                        Caption { text: qsTr("In Diagrammen"); Layout.fillWidth: true }
+                        Label {
+                            text: qsTr("%1 von %2").arg(root.usageCount).arg(root.wc ? root.wc.availableCharts.length : 0)
+                            font.pixelSize: AppTheme.fontSize.small
+                            color: AppTheme.text.hint
+                        }
+                    }
                     Label {
                         visible: !root.wc || root.wc.availableCharts.length === 0
                         text: qsTr("Noch kein Diagramm vorhanden.")
@@ -396,10 +422,11 @@ Rectangle {
                     }
                     Repeater {
                         model: root.wc ? root.wc.availableCharts : []
-                        delegate: RowLayout {
+                        delegate: Rectangle {
                             id: usage
                             required property var modelData
                             readonly property bool ts: modelData.chartType === "time_series"
+                            readonly property bool used: assigned(ts ? "y" : null) || (ts && assigned("x"))
                             function assigned(field) {
                                 return root.wc.assignmentRevision >= 0 && root.wc.chartLineModel.hasLineForChart(root.selectedSignalId, modelData.chartId, field)
                             }
@@ -408,26 +435,49 @@ Rectangle {
                                 else root.wc.unassignSignal(root.selectedSignalId, modelData.chartId, field)
                             }
                             Layout.fillWidth: true
-                            spacing: 8
-                            Label { text: usage.modelData.chartTitle; elide: Text.ElideRight; Layout.fillWidth: true }
-                            CheckBox {
-                                text: usage.ts ? "Y(t)" : AppTheme.chartTypeBadge(usage.modelData.chartType)
-                                font.family: AppTheme.monoFamily
-                                padding: 0
-                                checked: usage.assigned(usage.ts ? "y" : null)
-                                onToggled: usage.toggle(usage.ts ? "y" : null, checked)
-                                Accessible.name: usage.modelData.chartTitle + " " + text
-                            }
-                            CheckBox {
-                                visible: usage.ts
-                                text: "X(t)"
-                                font.family: AppTheme.monoFamily
-                                padding: 0
-                                checked: usage.ts && usage.assigned("x")
-                                onToggled: usage.toggle("x", checked)
-                                Accessible.name: usage.modelData.chartTitle + " X(t)"
-                                ToolTip.visible: hovered
-                                ToolTip.text: qsTr("Nur bei explizitem X-Wert im Datenpaket")
+                            implicitHeight: 40
+                            radius: AppTheme.radius.medium
+                            color: used ? AppTheme.surfaces.card : "transparent"
+                            border.color: used ? AppTheme.borders.strong : AppTheme.borders.primary
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 10
+                                anchors.rightMargin: 8
+                                spacing: 8
+                                Rectangle {
+                                    readonly property var colors: AppTheme.chartTypeBadgeColors(usage.modelData.chartType)
+                                    implicitWidth: badge.implicitWidth + 10
+                                    implicitHeight: 18
+                                    radius: 4
+                                    color: colors[0]
+                                    Label { id: badge; anchors.centerIn: parent; text: AppTheme.chartTypeBadge(usage.modelData.chartType); color: parent.colors[1]; font.family: AppTheme.monoFamily; font.pixelSize: AppTheme.fontSize.caption }
+                                }
+                                Label {
+                                    text: usage.modelData.chartTitle
+                                    elide: Text.ElideRight
+                                    color: usage.used ? AppTheme.text.primary : AppTheme.text.secondary
+                                    Layout.fillWidth: true
+                                }
+                                ToggleChip {
+                                    text: usage.ts ? "Y(t)" : qsTr("Zeigen")
+                                    mono: usage.ts
+                                    checked: usage.assigned(usage.ts ? "y" : null)
+                                    onToggled: usage.toggle(usage.ts ? "y" : null, checked)
+                                    Accessible.name: usage.modelData.chartTitle + " " + text
+                                    ToolTip.visible: hovered
+                                    ToolTip.delay: 500
+                                    ToolTip.text: usage.ts ? qsTr("Messwert über der Zeit") : qsTr("In diesem Diagramm anzeigen")
+                                }
+                                ToggleChip {
+                                    visible: usage.ts
+                                    text: "X(t)"
+                                    checked: usage.ts && usage.assigned("x")
+                                    onToggled: usage.toggle("x", checked)
+                                    Accessible.name: usage.modelData.chartTitle + " X(t)"
+                                    ToolTip.visible: hovered
+                                    ToolTip.delay: 500
+                                    ToolTip.text: qsTr("X-Wert über der Zeit; nur bei explizitem X im Datenpaket")
+                                }
                             }
                         }
                     }

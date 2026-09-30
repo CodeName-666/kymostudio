@@ -1,227 +1,73 @@
 import QtQuick 6.4
 import QtQuick.Controls 6.4
-import QtQuick.Layouts 1.15
-import Common 1.0
+import QtQuick.Layouts 6.4
 import Theme 1.0
+import "../../Workbench"
 
+/** TCP (Telnet) source settings. Keys: mode, port, and for clients host, reconnect_delay. */
 ColumnLayout {
     id: root
+    spacing: 20
 
-    spacing: 12
+    readonly property var modes: ["Client", "Server"]
+    readonly property bool client: modeSeg.currentIndex === 0
 
-    // Mode Selection
-    ColumnLayout {
-        Layout.fillWidth: true
-        spacing: 6
-
-        Label {
-            text: qsTr("Modus") + " *"
-            font.pixelSize: 12
-            font.bold: true
-            color: AppTheme.text.primary
+    FormSection {
+        title: qsTr("Verbindung")
+        FieldRow {
+            label: qsTr("Modus")
+            required: true
+            hint: root.client ? qsTr("Verbindet sich mit einem entfernten Server.") : qsTr("Wartet an diesem Port auf eingehende Verbindungen.")
+            Segmented { id: modeSeg; accessibleName: qsTr("Modus"); options: [{ text: "Client" }, { text: "Server" }]; currentIndex: 0 }
         }
-
-        ComboBox {
-            id: modeCombo
-            Layout.fillWidth: true
-            font.pixelSize: 12
-
-            model: ["Client", "Server"]
-            currentIndex: 0
-
-            background: Rectangle {
-                color: AppTheme.inputs.background
-                border.color: parent.activeFocus ? AppTheme.palette.primary : AppTheme.borders.primary
-                border.width: 1
-                radius: 4
-            }
-
-            contentItem: Text {
-                text: modeCombo.displayText
-                font: modeCombo.font
-                color: AppTheme.text.primary
-                verticalAlignment: Text.AlignVCenter
-                leftPadding: 10
+        FieldRow {
+            visible: root.client
+            label: qsTr("Host")
+            required: true
+            TextField {
+                id: hostField
+                text: "localhost"
+                Layout.preferredWidth: 240
+                placeholderText: qsTr("localhost oder 192.168.1.100")
+                selectByMouse: true
+                Accessible.name: qsTr("Host")
             }
         }
-
-        Label {
-            text: qsTr("Client: mit entferntem Server verbinden\nServer: eingehende Verbindungen annehmen")
-            font.pixelSize: 10
-            color: "#808080"
-            wrapMode: Text.WordWrap
-            Layout.fillWidth: true
+        FieldRow {
+            label: qsTr("Port")
+            required: true
+            TextField {
+                id: portField
+                text: "23"
+                Layout.preferredWidth: 90
+                placeholderText: "23"
+                validator: IntValidator { bottom: 1; top: 65535 }
+                selectByMouse: true
+                Accessible.name: qsTr("Port")
+            }
+        }
+        FieldRow {
+            visible: root.client
+            label: qsTr("Neuverbindung")
+            hint: qsTr("Wartezeit nach Verbindungsabbruch; 0 = keine automatische Neuverbindung.")
+            SpinBox { id: reconnectSpinBox; from: 0; to: 60; value: 5; editable: true; Layout.preferredWidth: 110; Accessible.name: qsTr("Neuverbindung nach Sekunden") }
+            Label { text: qsTr("s"); color: AppTheme.text.hint }
         }
     }
 
-    // Host (only for Client mode)
-    ColumnLayout {
-        Layout.fillWidth: true
-        spacing: 6
-        visible: modeCombo.currentText === "Client"
-
-        Label {
-            text: qsTr("Host") + " *"
-            font.pixelSize: 12
-            font.bold: true
-            color: AppTheme.text.primary
-        }
-
-        TextField {
-            id: hostField
-            Layout.fillWidth: true
-            placeholderText: qsTr("z. B. localhost oder 192.168.1.100")
-            text: "localhost"
-            font.pixelSize: 12
-
-            background: Rectangle {
-                color: AppTheme.inputs.background
-                border.color: parent.activeFocus ? AppTheme.palette.primary : AppTheme.borders.primary
-                border.width: 1
-                radius: 4
-            }
-
-            color: AppTheme.text.primary
-        }
-    }
-
-    // Port
-    ColumnLayout {
-        Layout.fillWidth: true
-        spacing: 6
-
-        Label {
-            text: qsTr("Port") + " *"
-            font.pixelSize: 12
-            font.bold: true
-            color: AppTheme.text.primary
-        }
-
-        TextField {
-            id: portField
-            Layout.fillWidth: true
-            placeholderText: qsTr("Standard: 23")
-            text: "23"
-            font.pixelSize: 12
-            validator: IntValidator { bottom: 1; top: 65535 }
-
-            background: Rectangle {
-                color: AppTheme.inputs.background
-                border.color: parent.activeFocus ? AppTheme.palette.primary : AppTheme.borders.primary
-                border.width: 1
-                radius: 4
-            }
-
-            color: AppTheme.text.primary
-        }
-    }
-
-    // Reconnect Delay (only for Client mode)
-    ColumnLayout {
-        Layout.fillWidth: true
-        spacing: 6
-        visible: modeCombo.currentText === "Client"
-
-        Label {
-            text: qsTr("Neuverbindung nach (Sekunden)")
-            font.pixelSize: 12
-            font.bold: true
-            color: AppTheme.text.primary
-        }
-
-        SpinBox {
-            id: reconnectSpinBox
-            Layout.fillWidth: true
-            from: 0
-            to: 60
-            value: 5
-            editable: true
-            font.pixelSize: 12
-
-            background: Rectangle {
-                color: AppTheme.inputs.background
-                border.color: parent.activeFocus ? AppTheme.palette.primary : AppTheme.borders.primary
-                border.width: 1
-                radius: 4
-            }
-
-            contentItem: TextInput {
-                text: reconnectSpinBox.textFromValue(reconnectSpinBox.value, reconnectSpinBox.locale)
-                font: reconnectSpinBox.font
-                color: AppTheme.text.primary
-                horizontalAlignment: Qt.AlignHCenter
-                verticalAlignment: Qt.AlignVCenter
-                readOnly: !reconnectSpinBox.editable
-                validator: reconnectSpinBox.validator
-            }
-
-            up.indicator: Rectangle {
-                x: reconnectSpinBox.width - width
-                height: parent.height / 2
-                color: reconnectSpinBox.up.pressed ? "#5d5d5d" : AppTheme.borders.primary
-                border.color: AppTheme.borders.primary
-
-                Text {
-                    text: "+"
-                    font.pixelSize: 14
-                    color: AppTheme.text.primary
-                    anchors.centerIn: parent
-                }
-            }
-
-            down.indicator: Rectangle {
-                x: reconnectSpinBox.width - width
-                y: parent.height / 2
-                height: parent.height / 2
-                color: reconnectSpinBox.down.pressed ? "#5d5d5d" : AppTheme.borders.primary
-                border.color: AppTheme.borders.primary
-
-                Text {
-                    text: "-"
-                    font.pixelSize: 14
-                    color: AppTheme.text.primary
-                    anchors.centerIn: parent
-                }
-            }
-        }
-
-        Label {
-            text: qsTr("0 = keine automatische Neuverbindung")
-            font.pixelSize: 10
-            color: "#808080"
-        }
-    }
-
-    Item {
-        Layout.fillHeight: true
-    }
-
-    // Functions
     function loadDefaults(defaults) {
-        if(defaults.mode) {
-            var modeIndex = modeCombo.model.indexOf(defaults.mode)
-            if(modeIndex >= 0) {
-                modeCombo.currentIndex = modeIndex
-            }
-        }
-        if(defaults.host) hostField.text = defaults.host
-        if(defaults.port) portField.text = defaults.port.toString()
-        if(defaults.reconnect_delay !== undefined) {
-            reconnectSpinBox.value = defaults.reconnect_delay
-        }
+        if (defaults.mode && modes.indexOf(defaults.mode) >= 0) modeSeg.currentIndex = modes.indexOf(defaults.mode)
+        if (defaults.host) hostField.text = defaults.host
+        if (defaults.port) portField.text = defaults.port.toString()
+        if (defaults.reconnect_delay !== undefined) reconnectSpinBox.value = defaults.reconnect_delay
     }
 
     function getSettings() {
-        var settings = {
-            "mode": modeCombo.currentText,
-            "port": parseInt(portField.text)
-        }
-
-        if(modeCombo.currentText === "Client") {
+        var settings = { "mode": modes[modeSeg.currentIndex], "port": parseInt(portField.text) }
+        if (client) {
             settings.host = hostField.text
             settings.reconnect_delay = reconnectSpinBox.value
         }
-
         return settings
     }
 }

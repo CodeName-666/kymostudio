@@ -30,15 +30,23 @@ qt6_add_qml_module(content
         Theme/AppTheme.qml
         Workbench/Caption.qml
         Workbench/ChartCreationDialog.qml
+        Workbench/ColorSwatches.qml
         Workbench/ConfirmDialog.qml
+        Workbench/DialogFooter.qml
+        Workbench/FieldRow.qml
+        Workbench/FormSection.qml
         Workbench/Icon.qml
         Workbench/IconButton.qml
         Workbench/Inspector.qml
         Workbench/PreferencesDialog.qml
         Workbench/Segmented.qml
+        Workbench/SignalDialog.qml
+        Workbench/SourceTypePicker.qml
         Workbench/SourcesDialog.qml
         Workbench/SourcesPanel.qml
+        Workbench/ToggleChip.qml
         Workbench/UiButton.qml
+        Workbench/WorkbenchDialog.qml
         Workspace/ChartWorkspace.qml
         Workspace/WorkspaceController.qml
         Workspace/WorkspaceDialogs.qml
