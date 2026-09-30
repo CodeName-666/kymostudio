@@ -17,7 +17,6 @@ QtObject {
     property var chartModel: ListModel {}
     property var chartLineModel: ChartLineModel {}
     property var signalModel: SignalModel {}
-    property var messageModel: MessageModel {}
     property var availableCharts: []
     property string activeChartId: ""
     // "tile" | "focus" | "free": how chart windows are arranged in the workspace.
@@ -54,11 +53,8 @@ QtObject {
         var events = root.backendEvents
         if (events) {
             if (events.newGraph) events.newGraph.connect(onNewGraph)
-            if (events.message_received) events.message_received.connect(onMessageReceived)
             if (events.signals_removed) events.signals_removed.connect(onSignalsRemoved)
-            if (events.append_graph_point) events.append_graph_point.connect(routeGraphPoint)
             if (events.append_graph_points_batch) events.append_graph_points_batch.connect(routeGraphPointsBatch)
-            if (events.append_graph_point_3d) events.append_graph_point_3d.connect(routeGraphPoint3D)
             if (events.append_graph_points_batch_3d) events.append_graph_points_batch_3d.connect(routeGraphPointsBatch3D)
         }
         root.initialized = true
@@ -69,11 +65,8 @@ QtObject {
         var events = root.backendEvents
         if (events) {
             try { if (events.newGraph) events.newGraph.disconnect(onNewGraph) } catch (e) {}
-            try { if (events.message_received) events.message_received.disconnect(onMessageReceived) } catch (e) {}
             try { if (events.signals_removed) events.signals_removed.disconnect(onSignalsRemoved) } catch (e) {}
-            try { if (events.append_graph_point) events.append_graph_point.disconnect(routeGraphPoint) } catch (e) {}
             try { if (events.append_graph_points_batch) events.append_graph_points_batch.disconnect(routeGraphPointsBatch) } catch (e) {}
-            try { if (events.append_graph_point_3d) events.append_graph_point_3d.disconnect(routeGraphPoint3D) } catch (e) {}
             try { if (events.append_graph_points_batch_3d) events.append_graph_points_batch_3d.disconnect(routeGraphPointsBatch3D) } catch (e) {}
         }
         root.backendEvents = null
@@ -276,10 +269,6 @@ QtObject {
         )
     }
 
-    function onMessageReceived(message) {
-        messageModel.addOrUpdateFromBackend(message)
-    }
-
     function onSignalsRemoved(uniqueIds) {
         if (!uniqueIds) return
         for (var i = 0; i < uniqueIds.length; i++) _removeSignalState(uniqueIds[i], false)
@@ -306,7 +295,6 @@ QtObject {
         }
         for (var j = 0; j < keys.length; j++) removeChartLine(keys[j])
         signalModel.removeSignal(uniqueId)
-        messageModel.removeMessage(uniqueId)
         if (root.backendInterface) {
             if (ignoreInBackend && root.backendInterface.set_signal_ignored) {
                 root.backendInterface.set_signal_ignored(uniqueId, true)
@@ -496,14 +484,6 @@ QtObject {
         target[chartId][uniqueId] = pending
     }
 
-    function routeGraphPoint(uniqueId, point) {
-        if (!point) return
-        var x = point.x !== undefined ? point.x : 0
-        var y = point.y !== undefined ? point.y : 0
-        var t = point.t !== undefined ? point.t : x
-        routeGraphPointsBatch(uniqueId, [[x, y, t, point.hasExplicitX !== false]])
-    }
-
     function routeGraphPointsBatch(uniqueId, points) {
         if (!points || !points.length) return
         var chartIds = _assignedChartIds(uniqueId, false)
@@ -512,11 +492,6 @@ QtObject {
             var window = root._windows[chartId]
             if (!window || !window.appendPointsBatch(uniqueId, points)) _queue(root._pending2D, chartId, uniqueId, points)
         }
-    }
-
-    function routeGraphPoint3D(uniqueId, point) {
-        if (!point) return
-        routeGraphPointsBatch3D(uniqueId, [[point.x || 0, point.y || 0, point.z || 0]])
     }
 
     function routeGraphPointsBatch3D(uniqueId, points) {
@@ -608,7 +583,6 @@ QtObject {
     }
     function clearDisplays() {
         _pending2D = ({}); _pending3D = ({})
-        messageModel.clear()
         for (var key in _windows) {
             var renderer = _windows[key].chartRenderer
             if (renderer && renderer.clearAll) renderer.clearAll()
@@ -654,7 +628,7 @@ QtObject {
         if (state.version !== 1) return
         state.charts = state.charts || []; state.signals = state.signals || []; state.assignments = state.assignments || []
         chartLineModel.clear(); chartLineModel.modelChanged()
-        signalModel.clearAll(); messageModel.clear()
+        signalModel.clearAll()
         chartModel.clear(); _windows = ({}); registeredWindowCount = 0
         _pending2D = ({}); _pending3D = ({}); _restoredViews = ({})
         for (var i = 0; i < state.charts.length; i++) {

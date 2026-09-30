@@ -55,7 +55,7 @@ class QmlArchitectureContractTests(unittest.TestCase):
     def test_workspace_routes_2d_and_3d_only_to_compatible_charts(self) -> None:
         source = self._read("Workspace/WorkspaceController.qml")
         two_d = source[
-            source.index("function routeGraphPointsBatch(") : source.index("function routeGraphPoint3D(")
+            source.index("function routeGraphPointsBatch(") : source.index("function routeGraphPointsBatch3D(")
         ]
         three_d = source[
             source.index("function routeGraphPointsBatch3D(") : source.index("function _flushPendingForChart(")

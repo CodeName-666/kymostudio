@@ -9,8 +9,6 @@ AppUi {
     id: appRoot
     objectName: "appRoot"
 
-    property var simulatorBackend: null
-
     workspaceController: WorkspaceController {
         id: workspace
         objectName: "workspaceController"
@@ -21,21 +19,13 @@ AppUi {
         Logger.log_info("App: Component.onCompleted - Initializing application")
         appController = App.create()
 
-        var selectedBackend = null
-        if(typeof Backend !== 'undefined')
+        if(typeof Backend === 'undefined')
         {
-            Logger.log_info("App: Using Backend interface");
-            appController.setup(appRoot, Backend);
-            selectedBackend = Backend
+            Logger.log_error("App: Python Backend is not available - start the app via run.py");
+            return
         }
-        else
-        {
-            Logger.log_info("App: Using Simulator backend");
-            simulatorBackend = new Simulator.Simulator()
-            appController.setup(appRoot, simulatorBackend);
-            selectedBackend = simulatorBackend
-        }
-        workspaceController.initialize(appController, selectedBackend)
+        appController.setup(appRoot, Backend);
+        workspaceController.initialize(appController, Backend)
         connectSignals();
         initializeWorkbench();
 

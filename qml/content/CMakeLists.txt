@@ -26,7 +26,6 @@ qt6_add_qml_module(content
         ChartWindow/EditChartLineDialog/EditChartLineDialog.qml
         FloatingWindows/FloatingChartWindow.qml
         Models/ChartLineModel.qml
-        Models/MessageModel.qml
         Models/SignalModel.qml
         Theme/AppTheme.qml
         Workbench/Caption.qml

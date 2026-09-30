@@ -99,14 +99,12 @@ class Backend(QObject):
         self._sample_store = SampleStore()
         self._capture_start: float | None = None
         self._source_time_origins: dict[str, float] = {}
-        self._last_rx_monotonic: dict[str, float] = {}
         self._parse_warning_times: dict[str, float] = {}
         self._received_total = self._invalid_total = self._display_dropped = 0
         self._display_reduced = self._event_dropped = self._signal_limit_dropped = 0
         self._max_pending_points = 4096
         self._display_point_limit = 10000
         self._display_paused = False
-        self._last_message_flush = 0.0
         self._export_worker = None
         self._metrics_time = time.monotonic()
         self._metrics_received = 0
@@ -124,10 +122,6 @@ class Backend(QObject):
         self._batch_timer.timeout.connect(self._flush_point_buffer)
         self._batch_timer.start(33)  # Display clock, independent of acquisition rate.
         self._batch_size = 4096  # Upper bound on points per series/frame.
-
-        # Message registry (UI table) - throttle updates to the same batch timer
-        self._message_state: Dict[str, Dict[str, Any]] = {}
-        self._dirty_messages: set[str] = set()
 
         # Performance optimization: Downsampling
         self._downsample_enabled = False  # Disabled by default
@@ -449,21 +443,12 @@ class Backend(QObject):
             state["announced"] = True
 
         # ------------------------------------------------------------------
-        # Message registry (for UI inspection)
+        # Time normalization
         # ------------------------------------------------------------------
         now = time.time()
         monotonic_now = time.monotonic()
         if self._capture_start is None:
             self._capture_start = monotonic_now
-        conn_info = self.__connections.get(interface)
-        interface_type = conn_info.interface_type if conn_info else interface
-
-        prev = self._message_state.get(unique_id)
-        prev_rx = self._last_rx_monotonic.get(unique_id)
-        cycle_time = (monotonic_now - prev_rx) if prev_rx is not None else None
-        self._last_rx_monotonic[unique_id] = monotonic_now
-        rx_count = (int(prev.get("rxCount", 0)) + 1) if prev else 1
-
         # Pre-calculate time normalization even if X is present (needed for time-series views)
         t_value = None
         if data_point.timestamp is not None:
@@ -475,22 +460,6 @@ class Backend(QObject):
                 state["first_rx_time"] = now
             t_value = float(monotonic_now - self._capture_start)
 
-        self._message_state[unique_id] = {
-            "uniqueId": unique_id,
-            "displayName": state["display_name"],
-            "interface": interface,
-            "interfaceType": interface_type,
-            "dataId": int(data_point.id),
-            "x": float(data_point.x) if getattr(data_point, "x", None) is not None else None,
-            "y": float(data_point.value),
-            "z": float(data_point.z_value) if getattr(data_point, "z_value", None) is not None else None,
-            "timestamp": float(data_point.timestamp) if data_point.timestamp is not None else None,
-            "t": t_value,
-            "rxTime": float(now),
-            "cycleTime": float(cycle_time) if cycle_time is not None else None,
-            "rxCount": rx_count,
-        }
-        self._dirty_messages.add(unique_id)
 
         # ------------------------------------------------------------------
         # Chart routing (2D + optional 3D)
@@ -634,10 +603,6 @@ class Backend(QObject):
                 self._flush_points_for_line(key)
             for key in list(self._point_buffer_3d):
                 self._flush_points_for_line_3d(key)
-        now = time.monotonic()
-        if now - self._last_message_flush >= 0.2:
-            self._last_message_flush = now
-            self._flush_message_updates()
 
     def _flush_points_for_line(self, unique_id: str) -> None:
         points = list(self._point_buffer.pop(unique_id, []))
@@ -661,19 +626,6 @@ class Backend(QObject):
         if remaining:
             self._point_buffer_3d[unique_id] = deque(remaining, maxlen=self._max_pending_points)
         self._queue_event("append_graph_points_batch_3d", unique_id, [list(p) for p in batch])
-
-    def _flush_message_updates(self) -> None:
-        if not self._dirty_messages:
-            return
-
-        # Emit latest state per message (throttled to batch timer)
-        for unique_id in list(self._dirty_messages):
-            msg = self._message_state.get(unique_id)
-            if not msg:
-                continue
-            self._queue_event("message_received", msg)
-
-        self._dirty_messages.clear()
 
     @Slot(int)
     def set_batch_interval(self, interval_ms: int) -> None:
@@ -911,8 +863,8 @@ class Backend(QObject):
             info.receiver.deleteLater()
         prefix = connection_id + "_"
         mappings = (self._graph_state, self._point_buffer,
-                    self._point_buffer_3d, self._last_emit_time, self._message_state,
-                    self._chart_line_overrides, self._last_rx_monotonic)
+                    self._point_buffer_3d, self._last_emit_time,
+                    self._chart_line_overrides)
         removed = {key for state in mappings for key in state if key.startswith(prefix)}
         removed.update(key for key in self._ignored_signals if key.startswith(prefix))
         for state in mappings:
@@ -920,7 +872,6 @@ class Backend(QObject):
                 state.pop(key, None)
         for key in removed:
             self._sample_store.remove(key)
-        self._dirty_messages.difference_update(removed)
         self._ignored_signals.difference_update(removed)
         self._source_time_origins.pop(connection_id, None)
         for event_name, events in list(self._pending_events.items()):
@@ -1185,10 +1136,7 @@ class Backend(QObject):
         self._sample_store.clear()
         self._point_buffer.clear()
         self._point_buffer_3d.clear()
-        self._message_state.clear()
-        self._dirty_messages.clear()
         self._source_time_origins.clear()
-        self._last_rx_monotonic.clear()
         self._capture_start = None
         self._received_total = self._invalid_total = self._display_dropped = 0
         self._display_reduced = self._event_dropped = self._signal_limit_dropped = 0

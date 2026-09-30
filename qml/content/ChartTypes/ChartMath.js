@@ -37,7 +37,7 @@ function appendBatch(series, points, limit, bridge) {
             clean.push([p[0], p[1]])
     }
     if (bridge) return bridge.appendBatch(series, clean, limit)
-    // Designer/simulator fallback; the Python application uses the native path.
+    // Designer fallback; the Python application uses the native path.
     var excess = Math.min(series.count, Math.max(0, series.count + clean.length - limit))
     if (excess) series.removePoints(0, excess)
     for (var k = 0; k < clean.length; k++) series.append(clean[k][0], clean[k][1])

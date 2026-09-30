@@ -58,14 +58,12 @@ class BackendConnectionCleanupTests(unittest.TestCase):
         self.backend._point_buffer.update({removed_id: [(1, 2, 3, True)], kept_id: []})
         self.backend._point_buffer_3d.update({removed_id: [(1, 2, 3)], kept_id: []})
         self.backend._last_emit_time.update({removed_id: 1.0, kept_id: 2.0})
-        self.backend._message_state.update({removed_id: {"uniqueId": removed_id}, kept_id: {}})
         self.backend._chart_line_overrides.update(
             {
                 removed_id: {"display_name": "gone", "color": "#fff"},
                 kept_id: {"display_name": "keep", "color": "#fff"},
             }
         )
-        self.backend._dirty_messages.update({removed_id, kept_id})
         self.backend._ignored_signals.update({removed_id, kept_id})
         self.backend._pending_events = {
             "newGraph": [(removed_id, "gone", "#fff", "Serial"), (kept_id, "keep", "#fff", "Serial")],
@@ -79,13 +77,10 @@ class BackendConnectionCleanupTests(unittest.TestCase):
             self.backend._point_buffer,
             self.backend._point_buffer_3d,
             self.backend._last_emit_time,
-            self.backend._message_state,
             self.backend._chart_line_overrides,
         ):
             self.assertNotIn(removed_id, state)
             self.assertIn(kept_id, state)
-        self.assertNotIn(removed_id, self.backend._dirty_messages)
-        self.assertIn(kept_id, self.backend._dirty_messages)
         self.assertNotIn(removed_id, self.backend._ignored_signals)
         self.assertIn(kept_id, self.backend._ignored_signals)
 

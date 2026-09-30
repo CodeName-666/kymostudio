@@ -10,6 +10,5 @@ qt6_add_qml_module(Backend
     QML_FILES
         BackendRxSignals.qml
     RESOURCES
-        Simulator/Simulator.js
         BackendLogger.js
 )
