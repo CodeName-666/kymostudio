@@ -8,11 +8,39 @@ qt6_add_qml_module(content
     URI "content"
     VERSION 1.0
     QML_FILES
-        AppUi.qml
         App.qml
-        Workspace/WorkspaceController.qml
-        Workspace/ChartWorkspace.qml
-        Workspace/WorkspaceDialogs.qml
+        AppUi.qml
+        ChartTypes/ChartCursor.qml
+        ChartTypes/ChartMath.js
+        ChartTypes/TimeSeriesRenderer.qml
+        ChartTypes/XYChartRenderer.qml
+        ChartTypes/XYChartView.qml
+        ChartTypes/XYZChartRenderer.qml
+        ChartWindow/AddChartLineDialog/AddChartLineDialog.qml
+        ChartWindow/ColorPicker/ColorPicker.qml
+        ChartWindow/ConnectionManager/CanSettings.qml
+        ChartWindow/ConnectionManager/MqttSettings.qml
+        ChartWindow/ConnectionManager/SerialSettings.qml
+        ChartWindow/ConnectionManager/TelnetSettings.qml
+        ChartWindow/ConnectionManager/TestSettings.qml
+        ChartWindow/EditChartLineDialog/EditChartLineDialog.qml
+        FloatingWindows/FloatingChartWindow.qml
+        Models/ChartLineModel.qml
+        Models/MessageModel.qml
+        Models/SignalModel.qml
         Theme/AppTheme.qml
-
+        Workbench/Caption.qml
+        Workbench/ChartCreationDialog.qml
+        Workbench/ConfirmDialog.qml
+        Workbench/Icon.qml
+        Workbench/IconButton.qml
+        Workbench/Inspector.qml
+        Workbench/PreferencesDialog.qml
+        Workbench/Segmented.qml
+        Workbench/SourcesDialog.qml
+        Workbench/SourcesPanel.qml
+        Workbench/UiButton.qml
+        Workspace/ChartWorkspace.qml
+        Workspace/WorkspaceController.qml
+        Workspace/WorkspaceDialogs.qml
 )

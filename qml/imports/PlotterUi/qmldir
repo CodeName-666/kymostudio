@@ -1,3 +1,2 @@
 Module PlotterUi
-singleton Constants 1.0 ../Common/Constants.qml
 App 1.0 App.js
