@@ -24,7 +24,7 @@ def test_supported_payloads(payload, expected):
     b'{"id":1,"value":1,"z":NaN}', b'{"id":1,"value":1,"timestamp":-1}',
     b'{"id":1,"value":1,"x":Infinity}', b'x'*65537,
     b'['*2000 + b'0' + b']'*2000,
-])
+], ids=lambda payload: payload[:24].decode('latin-1') + ('...' if len(payload) > 24 else ''))
 def test_bad_input_does_not_escape_as_a_valid_point(payload):
     with pytest.raises(ProtocolError):
         parse_payload(payload)

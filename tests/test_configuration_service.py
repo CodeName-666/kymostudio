@@ -34,7 +34,7 @@ def test_repository_uses_copy_and_returns_copies(tmp_path):
 def test_file_url_spaces_and_localhost(tmp_path):
     p = tmp_path/'a b.json'
     assert local_path(p.as_uri()) == p
-    assert local_path('file://localhost'+str(p).replace(' ','%20')) == p
+    assert local_path(p.as_uri().replace('file://', 'file://localhost', 1)) == p
     assert local_path(str(tmp_path/'literal%20.json')).name == 'literal%20.json'
 
 @pytest.mark.parametrize('path', ['', 'https://example.com/x', 'file:///tmp/a?x=1'])
