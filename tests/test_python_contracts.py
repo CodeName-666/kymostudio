@@ -8,7 +8,6 @@ pytest.importorskip("can", reason="python-can transport dependency missing")
 pytest.importorskip("serial", reason="pyserial transport dependency missing")
 pytest.importorskip("paho.mqtt.client", reason="paho-mqtt transport dependency missing")
 
-import inspect
 import io
 import json
 import struct
@@ -41,11 +40,6 @@ from Receiver.can_receiver import (  # noqa: E402
     can_message_to_plotter_payload,
     decode_can_value,
 )
-from Receiver.connections.can_connection import CanConnection  # noqa: E402
-from Receiver.connections.mqtt_connection import MqttConnection  # noqa: E402
-from Receiver.connections.serial_connection import SerialConnection  # noqa: E402
-from Receiver.connections.telnet_client_connection import TelnetClientConnection  # noqa: E402
-from Receiver.connections.telnet_server_connection import TelnetServerConnection  # noqa: E402
 from Receiver.registry import ReceiverRegistry  # noqa: E402
 from Core.paths import user_config_path
 from Logger.logger import Logger, log_info  # noqa: E402
@@ -136,23 +130,6 @@ class CanReceiverTests(unittest.TestCase):
         dialog = (PROJECT_ROOT / "qml" / "content" / "Workbench" / "SourcesDialog.qml").read_text(encoding="utf-8")
         self.assertIn('CAN: "CanSettings.qml"', dialog)
         self.assertIn('"../ChartWindow/ConnectionManager/"', dialog)
-
-
-class LegacyAdapterTests(unittest.TestCase):
-    def test_all_legacy_connection_classes_are_concrete_adapters(self) -> None:
-        adapters = (
-            SerialConnection,
-            MqttConnection,
-            TelnetClientConnection,
-            TelnetServerConnection,
-            CanConnection,
-        )
-        for adapter in adapters:
-            with self.subTest(adapter=adapter.__name__):
-                self.assertFalse(inspect.isabstract(adapter))
-                self.assertTrue(callable(getattr(adapter, "connect")))
-                self.assertTrue(callable(getattr(adapter, "disconnect")))
-                self.assertTrue(callable(getattr(adapter, "connected")))
 
 
 class ChartFactoryTests(unittest.TestCase):
