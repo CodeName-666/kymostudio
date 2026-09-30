@@ -16,14 +16,11 @@ qt6_add_qml_module(content
         ChartTypes/XYChartRenderer.qml
         ChartTypes/XYChartView.qml
         ChartTypes/XYZChartRenderer.qml
-        ChartWindow/AddChartLineDialog/AddChartLineDialog.qml
-        ChartWindow/ColorPicker/ColorPicker.qml
         ChartWindow/ConnectionManager/CanSettings.qml
         ChartWindow/ConnectionManager/MqttSettings.qml
         ChartWindow/ConnectionManager/SerialSettings.qml
         ChartWindow/ConnectionManager/TelnetSettings.qml
         ChartWindow/ConnectionManager/TestSettings.qml
-        ChartWindow/EditChartLineDialog/EditChartLineDialog.qml
         FloatingWindows/FloatingChartWindow.qml
         Models/ChartLineModel.qml
         Models/SignalModel.qml
