@@ -1,5 +1,4 @@
 # This Python file uses the following encoding: utf-8
-import hashlib
 import json
 import math
 import time
@@ -100,6 +99,8 @@ class Backend(QObject):
         self._capture_start: float | None = None
         self._source_time_origins: dict[str, float] = {}
         self._parse_warning_times: dict[str, float] = {}
+        # interface -> data id -> "interface_id"; avoids formatting the key per sample.
+        self._unique_ids: dict[str, dict[int, str]] = {}
         self._received_total = self._invalid_total = self._display_dropped = 0
         self._display_reduced = self._event_dropped = self._signal_limit_dropped = 0
         self._max_pending_points = 4096
@@ -110,7 +111,7 @@ class Backend(QObject):
         self._metrics_received = 0
         self._connection_service = ConnectionService(
             self.__receiver_registry, self._on_receiver_data, self._emit_connections_changed,
-            self._emit_connection_status_changed, self._notify_status)
+            self._emit_connection_status_changed, self._notify_status, self._on_receiver_samples)
         self.__connections = self._connection_service.connections
 
         # Performance optimization: Batch updates
@@ -377,41 +378,98 @@ class Backend(QObject):
     # Internal helpers
     # ------------------------------------------------------------------ #
     def _on_receiver_data(self, interface: str, payload: bytes) -> None:
-        """Handle incoming data from a receiver.
-
-        Parses the payload into a PlotDataPoint and routes it to the correct graph line.
-        Uses ID-based routing where unique_id = "interface_dataId".
-        """
+        """Raw payload from a receiver without a worker thread (parsed here)."""
         data_point = self._parse_data_point(interface, payload)
-        if data_point is None:
-            return
+        if data_point is not None:
+            self._on_receiver_samples(interface, [(data_point, time.time(), time.monotonic())])
 
-        self._received_total += 1
-        # Create unique_id from interface and data ID
-        unique_id = f"{interface}_{data_point.id}"
+    def _on_receiver_samples(self, interface: str, items: list) -> None:
+        """Ingest one drain tick: (PlotDataPoint, rx_wall, rx_monotonic) tuples or ProtocolError.
 
-        # Ignore disabled signals
+        Signal lookup and QML announcement happen once per signal and tick; raw
+        samples enter the store in arrival order, display points per signal.
+        """
+        capture_start = self._capture_start
+        origins = self._source_time_origins
+        signals: dict[int, object] = {}
+        rows: list[tuple[str, Sample]] = []
+        points_2d: dict[str, list] = {}
+        points_3d: dict[str, list] = {}
+        received = limit_dropped = 0
+        for item in items:
+            if type(item) is not tuple:
+                self._report_parse_error(interface, item)
+                continue
+            point, rx_wall, rx_monotonic = item
+            received += 1
+            entry = signals.get(point.id)
+            if entry is None:
+                entry = signals[point.id] = self._signal_entry(interface, point.id)
+            if entry is False:
+                limit_dropped += 1
+                continue
+            if entry is True:  # ignored signal
+                continue
+            unique_id, pending_2d = entry
+
+            # Time axis: source timestamp relative to its first value, else receive time.
+            if point.timestamp is not None:
+                t_value = point.timestamp - origins.setdefault(interface, point.timestamp)
+            else:
+                if capture_start is None:
+                    capture_start = self._capture_start = rx_monotonic
+                t_value = rx_monotonic - capture_start
+            x = point.x
+            y = point.value
+            rows.append((unique_id, Sample(t_value, x, y, point.z_value, point.timestamp, rx_wall)))
+            explicit_x = x is not None
+            x_value = x if explicit_x else t_value
+            if pending_2d is None:
+                pending_2d = points_2d[unique_id] = []
+                signals[point.id] = (unique_id, pending_2d)
+            pending_2d.append((x_value, y, t_value, explicit_x))
+            if point.z_value is not None:
+                points_3d.setdefault(unique_id, []).append((x_value, y, point.z_value))
+
+        self._received_total += received
+        self._signal_limit_dropped += limit_dropped
+        if rows:
+            self._sample_store.extend(rows)
+        for unique_id, points in points_2d.items():
+            before = self._frames_2d.dropped
+            self._frames_2d.extend(unique_id, points)
+            self._display_dropped += self._frames_2d.dropped - before
+        for unique_id, points in points_3d.items():
+            before = self._frames_3d.dropped
+            self._frames_3d.extend(unique_id, points)
+            self._display_dropped += self._frames_3d.dropped - before
+
+    def _signal_entry(self, interface: str, data_id: int):
+        """(unique_id, None) for a routable signal, True if ignored, False if the signal limit is hit."""
+        ids = self._unique_ids.get(interface)
+        if ids is None:
+            ids = self._unique_ids[interface] = {}
+        unique_id = ids.get(data_id)
+        if unique_id is None:
+            unique_id = ids[data_id] = f"{interface}_{data_id}"
+
         if unique_id in self._ignored_signals:
-            return
+            return True
 
-        # Get or create state for this unique_id
         state = self._graph_state.get(unique_id)
         if state is None:
             if len(self._graph_state) >= 256:
-                self._signal_limit_dropped += 1
-                return
+                return False
             # New data source discovered - auto-create line
             conn_info = self.__connections.get(interface)
             interface_type = conn_info.interface_type if conn_info else interface
-
-            # Default naming/colors
-            color = self._color_from_id(data_point.id)
-            display_name = f"{interface_type} #{data_point.id}"
+            color = self._color_from_id(data_id)
+            display_name = f"{interface_type} #{data_id}"
 
             # Special case: Test interface provides stable, well-known signals
             if conn_info and conn_info.interface_type == "Test":
                 for tpl in self._TEST_SIGNAL_TEMPLATES:
-                    if int(tpl.get("dataId", -1)) == int(data_point.id):
+                    if int(tpl.get("dataId", -1)) == int(data_id):
                         display_name = str(tpl.get("displayName", display_name))
                         color = str(tpl.get("color", color))
                         break
@@ -422,112 +480,45 @@ class Backend(QObject):
                 color = override["color"]
 
             state = {
-                "id": data_point.id,
+                "id": data_id,
                 "unique_id": unique_id,
                 "interface": interface,
                 "display_name": display_name,
                 "color": color,
-                "auto_index": 0,
-                "first_timestamp": None,
-                "first_rx_time": None,
-                "announced": False
+                "announced": False,
             }
             self._graph_state[unique_id] = state
             logger.log_info(f"Auto-created line: {unique_id} ({display_name})")
 
-        # Announce graph to QML if not yet done
         if not state["announced"]:
             conn_info = self.__connections.get(interface)
             interface_type = conn_info.interface_type if conn_info else interface
             self._queue_event("newGraph", unique_id, state["display_name"], state["color"], interface_type)
             state["announced"] = True
-
-        # ------------------------------------------------------------------
-        # Time normalization
-        # ------------------------------------------------------------------
-        now = time.time()
-        monotonic_now = time.monotonic()
-        if self._capture_start is None:
-            self._capture_start = monotonic_now
-        # Pre-calculate time normalization even if X is present (needed for time-series views)
-        t_value = None
-        if data_point.timestamp is not None:
-            origin = self._source_time_origins.setdefault(interface, data_point.timestamp)
-            state["first_timestamp"] = origin
-            t_value = float(data_point.timestamp - origin)
-        else:
-            if state["first_rx_time"] is None:
-                state["first_rx_time"] = now
-            t_value = float(monotonic_now - self._capture_start)
-
-
-        # ------------------------------------------------------------------
-        # Chart routing (2D + optional 3D)
-        # ------------------------------------------------------------------
-        # XY X-axis value:
-        # - If an explicit X value is provided (XY mode), use it as-is.
-        # - Else if a timestamp is provided (time mode), use normalized time.
-        # - Else fall back to auto-increment.
-        if getattr(data_point, "x", None) is not None:
-            x_value = float(data_point.x)  # type: ignore[arg-type]
-        elif t_value is not None:
-            x_value = float(t_value)
-        else:
-            x_value = float(state["auto_index"])
-            state["auto_index"] += 1
-
-        # Time-series coordinate: prefer normalized timestamp even if X is present.
-        time_value = float(t_value)
-
-        # Retain original values before *any* display-only reduction/overflow.
-        self._sample_store.append(unique_id, Sample(
-            t=time_value, x=data_point.x, y=float(data_point.value), z=data_point.z_value,
-            timestamp=data_point.timestamp, rx_time=now))
-
-        # Points reach QML in frame batches on the display clock.
-        self._buffer_point(
-            unique_id,
-            x_value,
-            float(data_point.value),
-            time_value,
-            getattr(data_point, "x", None) is not None,
-        )
-
-        # 3D charts (XYZ): emit dedicated events when Z is present
-        if getattr(data_point, "z_value", None) is not None:
-            z_value = float(data_point.z_value)  # type: ignore[arg-type]
-            self._buffer_point_3d(unique_id, x_value, float(data_point.value), z_value)
+        return (unique_id, None)
 
     def _parse_data_point(self, interface: str, payload: bytes) -> PlotDataPoint | None:
         """Parse without coupling wire validation to Qt; rate-limit error reporting."""
         try:
             return parse_payload(payload)
         except ProtocolError as exc:
-            self._invalid_total += 1
-            now = time.monotonic()
-            if now - self._parse_warning_times.get(interface, -10.0) >= 1.0:
-                self._parse_warning_times[interface] = now
-                self._notify_status("warning", f"{interface}: {exc}")
+            self._report_parse_error(interface, exc)
             return None
 
-    def _color_from_name(self, name: str) -> int:
-        """Generate color from name hash (legacy)."""
-        digest = hashlib.sha1(name.encode("utf-8")).hexdigest()
-        return int(digest[:6], 16)
+    def _report_parse_error(self, interface: str, exc: Exception) -> None:
+        self._invalid_total += 1
+        now = time.monotonic()
+        if now - self._parse_warning_times.get(interface, -10.0) >= 1.0:
+            self._parse_warning_times[interface] = now
+            self._notify_status("warning", f"{interface}: {exc}")
 
-    def _color_from_id(self, data_id: int) -> int:
-        """Generate color from data ID (0-255).
+    # Same palette as the workbench colour swatches (AppTheme.seriesColors + extras).
+    _SERIES_COLORS = ("#5EC2FF", "#F2A65A", "#9BD77E", "#C79BFF", "#E78AB8",
+                      "#F2E27A", "#5FD1C4", "#FF7A73", "#8FA3BF", "#E7ECF3")
 
-        Uses a predefined color palette for better visual distinction.
-        """
-        # Color palette (12 distinct colors in hex format)
-        color_palette = [
-            0xe74c3c, 0x3498db, 0x2ecc71, 0xf39c12,
-            0x9b59b6, 0x1abc9c, 0xe67e22, 0x34495e,
-            0xff6b6b, 0x4ecdc4, 0x45b7d1, 0x96ceb4
-        ]
-        # Use modulo to cycle through palette
-        return color_palette[data_id % len(color_palette)]
+    def _color_from_id(self, data_id: int) -> str:
+        """Colour for an auto-created signal as "#rrggbb" (QML reads integers as black)."""
+        return self._SERIES_COLORS[data_id % len(self._SERIES_COLORS)]
 
     def _on_ui_setup_signal(self, settings: dict) -> None:
         self._queue_event("ui_setup", settings)
@@ -585,18 +576,6 @@ class Backend(QObject):
     # ------------------------------------------------------------------ #
     # Batch update methods for performance optimization
     # ------------------------------------------------------------------ #
-    def _buffer_point(self, unique_id: str, x: float, y: float, t: float,
-                      has_explicit_x: bool = True) -> None:
-        """Never render from the producer; the frame timer is the only batch clock."""
-        before = self._frames_2d.dropped
-        self._frames_2d.append(unique_id, (x, y, t, has_explicit_x))
-        self._display_dropped += self._frames_2d.dropped - before
-
-    def _buffer_point_3d(self, unique_id: str, x: float, y: float, z: float) -> None:
-        before = self._frames_3d.dropped
-        self._frames_3d.append(unique_id, (x, y, z))
-        self._display_dropped += self._frames_3d.dropped - before
-
     def _flush_point_buffer(self) -> None:
         if not self._display_paused:
             for key in list(self._point_buffer):

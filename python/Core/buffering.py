@@ -36,6 +36,18 @@ class FrameBuffer:
         queue.append(point)
         return True
 
+    def extend(self, key: str, points: Sequence[Any]) -> bool:
+        """Append many points of one series; same overflow policy as append()."""
+        queue = self.queues.get(key)
+        if queue is None:
+            if len(self.queues) >= self.max_series:
+                self.dropped += len(points)
+                return False
+            queue = self.queues[key] = deque(maxlen=self.max_points)
+        self.dropped += max(0, len(queue) + len(points) - self.max_points)
+        queue.extend(points)
+        return True
+
     def drain(self) -> dict[str, list]:
         result = {key: list(queue) for key, queue in self.queues.items() if queue}
         self.queues.clear()

@@ -97,8 +97,7 @@ class TelnetClientThread(ReceiverThread):
         self._protocol_decoder.reset()
 
     def _emit_messages(self, chunk: bytes) -> None:
-        for message in self._protocol_decoder.feed(chunk):
-            self.new_data.emit(message)
+        self.publish(self._protocol_decoder.feed(chunk))
 
 
 class TelnetServerThread(ReceiverThread):
@@ -215,8 +214,7 @@ class TelnetServerThread(ReceiverThread):
             self._listener = None
 
     def _emit_messages(self, chunk: bytes) -> None:
-        for message in self._protocol_decoder.feed(chunk):
-            self.new_data.emit(message)
+        self.publish(self._protocol_decoder.feed(chunk))
 
 
 class TelnetBaseReceiver(Receiver, ABC):

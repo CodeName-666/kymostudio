@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import time
 from abc import ABCMeta, abstractmethod
 from typing import Any, Dict, Optional
 
 from PySide6.QtCore import QObject, QTimer, Qt, Signal, Slot
 
 from Core.ingress import IngressQueue
+from Core.parsing import parse_payload
 
+from .binary_protocol import ProtocolError
 from .receiver_thread import ReceiverThread
 
 
@@ -26,9 +29,11 @@ class Receiver(QObject, metaclass=MetaQObjectABC):
     underlying protocol.
     """
 
-    # Bytes emitted from the underlying worker thread. Consumers connect to
-    # this signal to receive decoded payload from any receiver implementation.
+    # Raw payloads produced on the GUI thread (receivers without a worker).
     new_data = Signal(bytes)
+    # Worker output, once per drain tick: a list of (PlotDataPoint, rx_wall,
+    # rx_monotonic) tuples or ProtocolError instances, parsed in the worker.
+    samples_ready = Signal(object)
     connection_changed = Signal(bool)
     connection_failed = Signal(str)
 
@@ -41,7 +46,8 @@ class Receiver(QObject, metaclass=MetaQObjectABC):
         self._receiver_thread: Optional[ReceiverThread] = None
         self._connected: bool = False
         self._config: Dict[str, Any] = {}
-        self._ingress = IngressQueue()
+        # ~0.6 s of headroom at 50 000 samples/s if the GUI thread stalls.
+        self._ingress = IngressQueue(capacity=32768, max_bytes=16 * 1024 * 1024)
         self._drain_timer = QTimer(self)
         self._drain_timer.setInterval(16)
         self._drain_timer.timeout.connect(self._drain_ingress)
@@ -68,8 +74,9 @@ class Receiver(QObject, metaclass=MetaQObjectABC):
             self.detach_thread()
 
         self._receiver_thread = receiver_thread
-        # Only this tiny, locked enqueue executes in the producing thread.
-        # Parsing, model changes and status signals stay on the GUI thread.
+        receiver_thread._sink = self._enqueue_payloads
+        # Parsing and the locked enqueue execute in the producing thread;
+        # model changes and status signals stay on the GUI thread.
         self._receiver_thread.new_data.connect(self._enqueue_payload, Qt.DirectConnection)
         self._receiver_thread.connection_state.connect(self._set_connected, Qt.QueuedConnection)
         self._receiver_thread.finished.connect(self._worker_finished, Qt.QueuedConnection)
@@ -86,6 +93,7 @@ class Receiver(QObject, metaclass=MetaQObjectABC):
 
         if self._receiver_thread.isRunning():
             raise RuntimeError("Cannot detach a running acquisition worker")
+        self._receiver_thread._sink = None
         try:
             self._receiver_thread.connection_state.disconnect(self._set_connected)
             self._receiver_thread.finished.disconnect(self._worker_finished)
@@ -95,12 +103,6 @@ class Receiver(QObject, metaclass=MetaQObjectABC):
 
         self._receiver_thread.deleteLater()
         self._receiver_thread = None
-
-    @Slot(bytes)
-    def _on_thread_data(self, payload: bytes) -> None:
-        """Default slot that forwards worker data to backend consumers."""
-
-        self.new_data.emit(payload)
 
     # ------------------------------------------------------------------
     # Lifecycle helpers
@@ -149,12 +151,30 @@ class Receiver(QObject, metaclass=MetaQObjectABC):
 
     @Slot(bytes)
     def _enqueue_payload(self, payload: bytes) -> None:
-        self._ingress.put(payload)
+        self._enqueue_payloads((payload,))
+
+    def _enqueue_payloads(self, payloads) -> None:
+        """Runs in the producing thread: parse each message and stamp the receive time.
+
+        Messages handed over together arrived in the same read, so they share it.
+        """
+        rx_wall, rx_monotonic = time.time(), time.monotonic()
+        entries = []
+        for payload in payloads:
+            try:
+                point = parse_payload(payload)
+            except ProtocolError as exc:
+                entries.append((exc, len(payload)))
+                continue
+            if point is not None:
+                entries.append(((point, rx_wall, rx_monotonic), len(payload)))
+        self._ingress.put_many(entries)
 
     @Slot()
     def _drain_ingress(self) -> None:
-        for payload in self._ingress.drain(256):
-            self._on_thread_data(payload)
+        items = self._ingress.drain(self._ingress.capacity)
+        if items:
+            self.samples_ready.emit(items)
 
     @Slot()
     def _worker_finished(self) -> None:

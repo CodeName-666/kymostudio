@@ -38,14 +38,14 @@ class ChartCoordinateModeTests(unittest.TestCase):
         Backend._Backend__backend_instance = None
 
     def _capture_buffered_point(self, payload: bytes) -> tuple:
-        captured: list[tuple] = []
         self.backend._queue_event = lambda *args: None
-        self.backend._buffer_point = lambda *args: captured.append(args)
+        self.backend._frames_2d.clear()
 
         self.backend._on_receiver_data("Serial", payload)
 
-        self.assertEqual(len(captured), 1)
-        return captured[0]
+        (unique_id, points), = self.backend._frames_2d.queues.items()
+        self.assertEqual(len(points), 1)
+        return (unique_id, *points[0])
 
     def test_cartesian_xy_preserves_protocol_x_and_y(self) -> None:
         unique_id, x, y, _time_value, has_explicit_x = self._capture_buffered_point(

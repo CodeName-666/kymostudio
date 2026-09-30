@@ -7,11 +7,10 @@ pytest.importorskip("serial", reason="pyserial transport dependency missing")
 pytest.importorskip("paho.mqtt.client", reason="paho-mqtt transport dependency missing")
 
 import unittest
-from Receiver.binary_protocol import encode_data_point
+from Receiver.binary_protocol import ProtocolStreamDecoder, encode_data_point
 from Receiver.message import PlotDataPoint
 from Backend.backend import Backend  # noqa: E402
 from Receiver.mqtt_receiver import _extract_plotter_payload_lines  # noqa: E402
-from Receiver.serial_receiver import SerialReceiver  # noqa: E402
 from Receiver.can_receiver import can_message_to_plotter_payload  # noqa: E402
 import can  # noqa: E402
 
@@ -27,9 +26,16 @@ class TransportIntegrationTests(unittest.TestCase):
         second = encode_data_point(PlotDataPoint(id=2, value=2.0))
         self.assertEqual(_extract_plotter_payload_lines(first + second), [first, second])
 
-    def test_serial_receiver_never_strips_binary_crc_bytes(self) -> None:
-        frame = encode_data_point(PlotDataPoint(id=10, value=-8.0))
-        self.assertEqual(SerialReceiver._parse_payload(object(), frame), frame)
+    def test_stream_never_strips_crc_bytes_that_look_like_line_endings(self) -> None:
+        frames = {}
+        for value in range(2000):
+            frame = encode_data_point(PlotDataPoint(id=10, value=float(value)))
+            if frame[-1:] in (b"\r", b"\n"):
+                frames[frame[-1:]] = frame
+        self.assertEqual(set(frames), {b"\r", b"\n"})
+        for frame in frames.values():
+            self.assertEqual(ProtocolStreamDecoder().feed(frame), [frame])
+            self.assertEqual(Backend._parse_data_point(object(), "Serial", frame).id, 10)
 
     def test_can_fd_forwards_the_same_binary_frame(self) -> None:
         frame = encode_data_point(PlotDataPoint(id=9, x=1.0, value=2.0))
@@ -40,6 +46,7 @@ class TransportIntegrationTests(unittest.TestCase):
         class ParserContext:
             _invalid_total = 0
             _parse_warning_times = {}
+            _report_parse_error = Backend._report_parse_error
             def _notify_status(self, *_args) -> None:
                 pass
 

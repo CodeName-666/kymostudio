@@ -1,12 +1,46 @@
 """Own application/engine lifetime and explicit QML context dependencies."""
+import os
 from pathlib import Path
 
 from PySide6.QtCore import QObject
+from PySide6.QtGui import QGuiApplication, QOffscreenSurface, QOpenGLContext
 from PySide6.QtQml import QQmlApplicationEngine
+from PySide6.QtQuick import QQuickWindow, QSGRendererInterface
 from PySide6.QtWidgets import QApplication
 
 from Core.paths import PROJECT_ROOT
 from Backend.series_bridge import SeriesBridge
+
+
+def _opengl_usable() -> bool:
+    """Whether a real OpenGL context can be made current (not over RDP/VM without GL)."""
+    if QGuiApplication.platformName() in ("offscreen", "minimal"):
+        return False
+    context = QOpenGLContext()
+    if not context.create():
+        return False
+    surface = QOffscreenSurface()
+    surface.setFormat(context.format())
+    surface.create()
+    usable = surface.isValid() and context.makeCurrent(surface)
+    if usable:
+        context.doneCurrent()
+    return usable
+
+
+def prefer_opengl_scene_graph() -> bool:
+    """Render Qt Quick through OpenGL when available.
+
+    Qt Charts only accelerates line/scatter series (``useOpenGL``) on an OpenGL
+    scene graph; otherwise every frame repaints all points with QPainter on the
+    GUI thread. An explicit QSG_RHI_BACKEND / QT_QUICK_BACKEND choice wins.
+    """
+    if os.environ.get("QSG_RHI_BACKEND") or os.environ.get("QT_QUICK_BACKEND"):
+        return False
+    if not _opengl_usable():
+        return False
+    QQuickWindow.setGraphicsApi(QSGRendererInterface.GraphicsApi.OpenGL)
+    return True
 
 
 class Plotter(QObject):
@@ -14,6 +48,7 @@ class Plotter(QObject):
         app = QApplication.instance() or QApplication(args)
         super().__init__()
         self.app = app
+        prefer_opengl_scene_graph()
         self.engine = QQmlApplicationEngine()
         # Import resources only from the delivered application, not arbitrary
         # paths contained in an imported user configuration.

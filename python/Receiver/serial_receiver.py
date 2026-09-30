@@ -12,7 +12,7 @@ from Logger import logger
 
 from .receiver import Receiver
 from .receiver_thread import ReceiverThread
-from .binary_protocol import ProtocolStreamDecoder, is_binary_frame
+from .binary_protocol import ProtocolStreamDecoder
 
 
 def available_serial_ports() -> Dict[str, str]:
@@ -49,8 +49,7 @@ class SerialWorkerThread(ReceiverThread):
             if not payload:
                 continue
 
-            for message in self._protocol_decoder.feed(payload):
-                self.new_data.emit(message)
+            self.publish(self._protocol_decoder.feed(payload))
 
         logger.log_info("Serial worker thread stopped")
 
@@ -197,21 +196,6 @@ class SerialReceiver(Receiver):
 
         self._set_connected(False)
         logger.log_info("SerialReceiver disconnected")
-
-    def _on_thread_data(self, payload: bytes) -> None:
-        parsed = self._parse_payload(payload)
-        if parsed is None:
-            return
-        self.new_data.emit(parsed)
-
-    def _parse_payload(self, payload: bytes) -> Optional[bytes]:
-        """Hook for future parsers. Currently strips trailing newlines."""
-
-        if payload is None:
-            return None
-        if is_binary_frame(payload):
-            return payload
-        return payload.rstrip(b"\r\n")
 
 
 __all__ = ["SerialReceiver", "available_serial_ports"]

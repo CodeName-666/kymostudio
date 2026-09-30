@@ -37,9 +37,10 @@ class ConnectionService:
     """Own connection instances and preserve them on timeout/failure."""
 
     def __init__(self, registry: Any, on_data: Callable, on_change: Callable,
-                 on_status: Callable, notify: Callable) -> None:
+                 on_status: Callable, notify: Callable, on_samples: Callable | None = None) -> None:
         self.registry = registry
         self.on_data, self.on_change = on_data, on_change
+        self.on_samples = on_samples
         self.on_status, self.notify = on_status, notify
         self.connections: dict[str, ConnectionInfo] = {}
         self._requested: set[str] = set()
@@ -47,6 +48,8 @@ class ConnectionService:
     def _wire(self, info: ConnectionInfo) -> None:
         receiver = info.receiver
         receiver.new_data.connect(partial(self._data, info.connection_id, receiver))
+        if hasattr(receiver, 'samples_ready'):
+            receiver.samples_ready.connect(partial(self._samples, info.connection_id, receiver))
         if hasattr(receiver, 'connection_changed'):
             receiver.connection_changed.connect(partial(self._receiver_state, info.connection_id, receiver))
         if hasattr(receiver, 'connection_failed'):
@@ -55,6 +58,10 @@ class ConnectionService:
     def _data(self, key: str, receiver: ReceiverProtocol, payload: bytes) -> None:
         if key in self.connections and self.connections[key].receiver is receiver:
             self.on_data(key, payload)
+
+    def _samples(self, key: str, receiver: ReceiverProtocol, items: list) -> None:
+        if self.on_samples and key in self.connections and self.connections[key].receiver is receiver:
+            self.on_samples(key, items)
 
     def _status(self, key: str, status: str, error: str = '') -> None:
         info = self.connections.get(key)

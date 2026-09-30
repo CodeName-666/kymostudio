@@ -13,7 +13,24 @@ class ReceiverThread(QThread):
     def __init__(self, parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
         self._stop_requested = Event()
+        self._sink = None  # set by Receiver.attach_thread; called in this thread
         self.stop_event.connect(self.on_stop)
+
+    def publish(self, messages) -> None:
+        """Hand framed messages to the owning receiver in one call.
+
+        A Qt signal per message costs far more than parsing the message, so the
+        attached receiver installs a thread-safe sink; without one every message
+        is still emitted through ``new_data``.
+        """
+        if not messages:
+            return
+        sink = self._sink
+        if sink is not None:
+            sink(messages)
+        else:
+            for message in messages:
+                self.new_data.emit(message)
 
     def stop(self) -> None:
         self._stop_requested.set()

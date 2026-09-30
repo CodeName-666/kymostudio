@@ -119,7 +119,7 @@ class CanWorkerThread(ReceiverThread):
             except (TypeError, ValueError, struct.error) as exc:
                 logger.log_warning(f"Ignoring invalid CAN frame {message.arbitration_id:#x}: {exc}")
                 continue
-            self.new_data.emit(payload)
+            self.publish([payload])
         logger.log_info("CAN worker thread stopped")
 
     def send_response(self, response: bytes) -> None:

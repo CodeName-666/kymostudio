@@ -209,20 +209,18 @@ class MqttWorkerThread(ReceiverThread):
 
     def _on_message(self, client, userdata, message):  # pylint: disable=unused-argument
         if len(message.payload) > 65536:
-            self.new_data.emit(message.payload)  # The bounded ingress counts/rejects it.
+            self.publish([message.payload])  # The bounded ingress counts/rejects it.
             return
         try:
             plotter_lines = _extract_plotter_payload_lines(message.payload)
         except (ValueError, RecursionError, UnicodeError):
-            self.new_data.emit(message.payload)
+            self.publish([message.payload])
             return
         if plotter_lines:
-            for line in plotter_lines:
-                self.new_data.emit(line)
+            self.publish(plotter_lines)
             return
 
-        normalized = normalize_payload(message.topic, message.payload)
-        self.new_data.emit(normalized)
+        self.publish([normalize_payload(message.topic, message.payload)])
 
 
 class MqttReceiver(Receiver):

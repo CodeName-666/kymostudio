@@ -232,7 +232,8 @@ Item {
         var series = chart.createSeries(ChartView.SeriesTypeLine, displayName, timeAxis, valueAxis)
         series.color = color || Qt.rgba(Math.random(), Math.random(), Math.random(), 1)
         series.width = 2
-        series.useOpenGL = false
+        // GPU-drawn lines only on an OpenGL scene graph (see Plotter.prefer_opengl_scene_graph).
+        series.useOpenGL = root.GraphicsInfo.api === GraphicsInfo.OpenGL
 
         _graphs[lineKey] = {
             lineKey: lineKey,

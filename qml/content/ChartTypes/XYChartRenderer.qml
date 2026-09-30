@@ -28,9 +28,9 @@ Item {
     property real initialYMin: 0
     property real initialYMax: 10
     property bool useScatterSeries: false
-    // QtCharts OpenGL acceleration can render blank on some setups (e.g. software rendering).
-    // Keep disabled by default for reliability; enable explicitly if needed.
-    property bool useOpenGL: false
+    // QtCharts OpenGL acceleration renders blank without an OpenGL scene graph
+    // (e.g. software rendering), so it follows the active graphics API.
+    property bool useOpenGL: GraphicsInfo.api === GraphicsInfo.OpenGL
     property bool updatesSuspended: false
 
     // Internal state

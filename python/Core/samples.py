@@ -67,6 +67,35 @@ class SampleStore:
             self.evicted += 1
         return True
 
+    def extend(self, rows: Iterable[tuple[str, Sample]]) -> int:
+        """Append (key, sample) rows in arrival order; returns how many were kept."""
+        signals, global_, received = self._signals, self._global, self._received
+        max_per_signal, max_total = self.max_per_signal, self.max_total
+        sequence = self._sequence
+        kept = 0
+        for key, sample in rows:
+            signal = signals.get(key)
+            if signal is None:
+                if key not in received and len(received) >= self.max_signals:
+                    self.rejected += 1
+                    continue
+                signal = signals[key] = OrderedDict()
+            received[key] = received.get(key, 0) + 1
+            sequence += 1
+            signal[sequence] = sample
+            global_[sequence] = (key, sample)
+            kept += 1
+            if len(signal) > max_per_signal:
+                oldest, _ = signal.popitem(last=False)
+                del global_[oldest]
+                self.evicted += 1
+            while len(global_) > max_total:
+                oldest, (owner, _) = global_.popitem(last=False)
+                del signals[owner][oldest]
+                self.evicted += 1
+        self._sequence = sequence
+        return kept
+
     def samples(self, key: str) -> list[Sample]:
         return list(self._signals.get(key, {}).values())
 
