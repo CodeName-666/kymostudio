@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import sys
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 
@@ -27,7 +28,7 @@ from Receiver.message import PlotDataPoint  # noqa: E402
 class BinaryProtocolGoldenVectorTests(unittest.TestCase):
     def test_minimal_y_frame_matches_embedded_golden_vector(self) -> None:
         frame = encode_data_point(PlotDataPoint(id=7, value=1.0))
-        self.assertEqual(frame.hex(), "a55a40070000803f54")
+        self.assertEqual(frame.hex(), "a55a41070000803f00")
         self.assertEqual(len(frame), 9)
         self.assertEqual(decode_data_frame(frame), PlotDataPoint(id=7, value=1.0))
 
@@ -36,18 +37,39 @@ class BinaryProtocolGoldenVectorTests(unittest.TestCase):
         frame = encode_data_point(point)
         self.assertEqual(
             frame.hex(),
-            "a55a4e030000a03f000020c000001041d204000089",
+            "a55a4f030000a03f000020c000001041d204000000",
         )
         self.assertEqual(len(frame), 21)
         self.assertEqual(decode_data_frame(frame), point)
 
     def test_crc_and_non_finite_values_are_rejected(self) -> None:
-        frame = bytearray(encode_data_point(PlotDataPoint(id=1, value=2.0)))
+        frame = bytearray(encode_data_point(PlotDataPoint(id=1, value=2.0), crc_enabled=True))
         frame[-2] ^= 0x01
         with self.assertRaises(ProtocolError):
             decode_data_frame(bytes(frame))
         with self.assertRaises(ValueError):
             encode_data_point(PlotDataPoint(id=1, value=math.nan))
+
+    def test_default_mode_does_not_calculate_or_check_crc(self) -> None:
+        point = PlotDataPoint(id=7, value=1.0)
+        with patch("Receiver.binary_protocol.crc8", side_effect=AssertionError("CRC called")), \
+                patch("Receiver.binary_protocol._CRC8_TABLE", ()):
+            frame = encode_data_point(point)
+            self.assertEqual(frame.hex(), "a55a41070000803f00")
+            # The trailer is ignored in this mode, even when changed in transit.
+            changed = frame[:-1] + b"\xff"
+            self.assertEqual(decode_data_frame(changed), point)
+            self.assertEqual(ProtocolStreamDecoder().feed(changed), [changed])
+
+    def test_crc_opt_in_preserves_legacy_vectors(self) -> None:
+        point = PlotDataPoint(id=7, value=1.0)
+        frame = encode_data_point(point, crc_enabled=True)
+        self.assertEqual(frame.hex(), "a55a40070000803f54")
+        self.assertEqual(decode_data_frame(frame), point)
+        point = PlotDataPoint(id=3, x=1.25, value=-2.5, z_value=9.0, timestamp=1.234)
+        frame = encode_data_point(point, crc_enabled=True)
+        self.assertEqual(frame.hex(), "a55a4e030000a03f000020c000001041d204000089")
+        self.assertEqual(decode_data_frame(frame), point)
 
     def test_binary_frame_is_smaller_than_equivalent_json(self) -> None:
         point = PlotDataPoint(id=3, value=-2.5, timestamp=1.234)
@@ -74,10 +96,21 @@ class ProtocolStreamDecoderTests(unittest.TestCase):
 
     def test_decoder_resynchronizes_after_a_corrupt_frame(self) -> None:
         decoder = ProtocolStreamDecoder()
-        damaged = bytearray(encode_data_point(PlotDataPoint(id=1, value=1.0)))
+        damaged = bytearray(encode_data_point(PlotDataPoint(id=1, value=1.0), crc_enabled=True))
         damaged[-1] ^= 0x80
         valid = encode_data_point(PlotDataPoint(id=2, value=2.0))
         self.assertEqual(decoder.feed(bytes(damaged) + valid), [valid])
+
+    def test_mixed_crc_modes_across_every_fragment_size(self) -> None:
+        frames = [encode_data_point(PlotDataPoint(id=i, value=float(i)), crc_enabled=bool(i % 2))
+                  for i in range(8)]
+        wire = b"".join(frames)
+        for size in range(1, len(wire) + 1):
+            decoder = ProtocolStreamDecoder()
+            decoded = []
+            for offset in range(0, len(wire), size):
+                decoded.extend(decoder.feed(wire[offset:offset + size]))
+            self.assertEqual(decoded, frames)
 
 
 @unittest.skipUnless(ECU_SOURCE_ROOT.exists(), "Separate PlotterEcu sources were not included in the uploaded archive")

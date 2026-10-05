@@ -29,7 +29,7 @@ class TransportIntegrationTests(unittest.TestCase):
     def test_stream_never_strips_crc_bytes_that_look_like_line_endings(self) -> None:
         frames = {}
         for value in range(2000):
-            frame = encode_data_point(PlotDataPoint(id=10, value=float(value)))
+            frame = encode_data_point(PlotDataPoint(id=10, value=float(value)), crc_enabled=True)
             if frame[-1:] in (b"\r", b"\n"):
                 frames[frame[-1:]] = frame
         self.assertEqual(set(frames), {b"\r", b"\n"})
