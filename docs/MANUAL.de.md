@@ -1,6 +1,6 @@
 # KymoStudio – Handbuch
 
-[← Zurück zur Übersicht](../README.md)
+[← Zurück zur Übersicht](../README.de.md) · [English](MANUAL.md) · **Deutsch**
 
 Installation, Bedienung, Grenzen, Konfiguration und Prüfungen im Detail.
 
