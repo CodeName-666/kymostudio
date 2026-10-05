@@ -1,9 +1,9 @@
 {
-
   "imports": [
-    "../../qml", 
-    "../../qml/imports", 
-    "../../qml/content"
+    "../../qml",
+    "../../qml/imports",
+    "../../qml/content",
+    "../../qml/content/Settings"
   ],
   "interfaces": [
     {
@@ -17,14 +17,7 @@
       }
     },
     {
-      "type": "Telnet Client",
-      "default": {
-        "host": "localhost",
-        "port": 23
-      }
-    },
-    {
-      "type": "Telnet Server",
+      "type": "Telnet",
       "default": {
         "host": "localhost",
         "port": 23
@@ -38,25 +31,48 @@
         "rx_topic": "",
         "tx_topic": ""
       }
+    },
+    {
+      "type": "Test",
+      "default": {
+        "name": "Multi Test",
+        "color": "#ff4444",
+        "type": "Multi",
+        "use_timestamp": true,
+        "sample_ms": 50
+      }
+    },
+    {
+      "type": "CAN",
+      "default": {
+        "interface": "virtual",
+        "channel": "kymo",
+        "bitrate": 500000,
+        "value_format": "auto",
+        "scale": 1.0,
+        "offset": 0.0
+      }
     }
-
-   
-    
   ],
   "qml": {
     "interfaces": [
       "Serial",
-      "Telnet Client",
-      "Telnet Server",
-      "MQTT", 
-      "CAN"
+      "Telnet",
+      "MQTT",
+      "CAN",
+      "Test"
     ]
   },
-  
-  "logging" : {
-    "enabled": 1,
-    "console_log": 1,
-    "name" : "logfile.log",
-    "level": "DEBUG"
+  "logging": {
+    "enabled": true,
+    "console_log": false,
+    "name": "kymostudio.log",
+    "level": "INFO"
+  },
+  "performance": {
+    "frame_interval_ms": 33,
+    "display_points_per_signal": 10000,
+    "downsample_enabled": false,
+    "downsample_target_hz": 1000
   }
 }

@@ -1,0 +1,16 @@
+
+==================================== ERRORS ====================================
+______________ ERROR collecting tests/test_connection_service.py _______________
+ImportError while importing test module '/mnt/data/PlotterApp_Optimized/tests/test_connection_service.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_connection_service.py:3: in <module>
+    from Backend.connection_service import ConnectionService
+E   ModuleNotFoundError: No module named 'Backend.connection_service'
+=========================== short test summary info ============================
+ERROR tests/test_connection_service.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.22s

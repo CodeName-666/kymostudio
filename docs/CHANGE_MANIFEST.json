@@ -1,0 +1,745 @@
+{
+  "description": "File-level changes relative to the extracted baseline; moves are represented as removal + addition.",
+  "verification": "docs/TESTBERICHT.md",
+  "changes": [
+    {
+      "path": ".github/workflows/tests.yml",
+      "status": "added",
+      "sha256": "b55db6935307215450ad4502552fdc10ae8ef7249393e40427ae81555fdcb49d"
+    },
+    {
+      "path": ".gitignore",
+      "status": "modified",
+      "sha256": "57a1142211d572e3c2806008945068edb60397601446d60e7013c5cfb611f543"
+    },
+    {
+      "path": "BUGFIX_TEST_FUNCTIONS.md",
+      "status": "removed_or_archived"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "status": "added",
+      "sha256": "e574b85dd559b966c0e66d3c8a7b57dde6ed083eb54560886af8d3749189ada8"
+    },
+    {
+      "path": "FLOATING_MULTICHARTTYPE_REDESIGN.md",
+      "status": "removed_or_archived"
+    },
+    {
+      "path": "MESSAGE_ASSIGNMENT_DESIGN.md",
+      "status": "removed_or_archived"
+    },
+    {
+      "path": "MULTI_CHART_DESIGN.md",
+      "status": "removed_or_archived"
+    },
+    {
+      "path": "PERFORMANCE_OPTIMIZATIONS.md",
+      "status": "removed_or_archived"
+    },
+    {
+      "path": "PHASE2_WEEK3_COMPLETION.md",
+      "status": "removed_or_archived"
+    },
+    {
+      "path": "QUICKSTART_PHASE2.md",
+      "status": "removed_or_archived"
+    },
+    {
+      "path": "README.md",
+      "status": "added",
+      "sha256": "6b9a6644f55f735c45e5bfd7d143f5465360efc6827beba6d769da594fd6a70e"
+    },
+    {
+      "path": "ROADMAP_PHASE2_CONTINUATION.md",
+      "status": "removed_or_archived"
+    },
+    {
+      "path": "SETTINGS_UNIFICATION.md",
+      "status": "removed_or_archived"
+    },
+    {
+      "path": "TESTING.md",
+      "status": "removed_or_archived"
+    },
+    {
+      "path": "TESTING_FLOATING_WINDOWS.md",
+      "status": "removed_or_archived"
+    },
+    {
+      "path": "config/config.json",
+      "status": "modified",
+      "sha256": "268c882408287bcc23bcdba81756c803561db93cc02adf7dad912589a5acf04a"
+    },
+    {
+      "path": "docs/ARCHITEKTUR.md",
+      "status": "added",
+      "sha256": "8f4c39d83806742ec8cbb12c97deac8f56823e3e784de145b853d32c8f61979b"
+    },
+    {
+      "path": "docs/TESTBERICHT.md",
+      "status": "added",
+      "sha256": "e4edaa2f7e64f89357789f7023c225c812a8368d3493d005f731ac09c73149a0"
+    },
+    {
+      "path": "docs/legacy/BUGFIX_TEST_FUNCTIONS.md",
+      "status": "added",
+      "sha256": "dadcfc72b42bc282d94ef25031cca3895de98e19670ce1ee7ef01c7e55913d14"
+    },
+    {
+      "path": "docs/legacy/FLOATING_MULTICHARTTYPE_REDESIGN.md",
+      "status": "added",
+      "sha256": "f13191b16d384dc88e849b265a2f7aa3848e35188d8246f68e153fdb8f36c4a3"
+    },
+    {
+      "path": "docs/legacy/MESSAGE_ASSIGNMENT_DESIGN.md",
+      "status": "added",
+      "sha256": "d628cf9f90bc324d169b4ad939cddecd3330a478c2a0fd6525b0ac8245dbf785"
+    },
+    {
+      "path": "docs/legacy/MULTI_CHART_DESIGN.md",
+      "status": "added",
+      "sha256": "a8af764ba86dc3a43dd7163eb171995b88232a88e67acf289e8049d4008d293c"
+    },
+    {
+      "path": "docs/legacy/PERFORMANCE_OPTIMIZATIONS.md",
+      "status": "added",
+      "sha256": "337838aafb5db42dea5f8389b4701cdc8d7ecfe417b91f638e9645ca3844c2b9"
+    },
+    {
+      "path": "docs/legacy/PHASE2_WEEK3_COMPLETION.md",
+      "status": "added",
+      "sha256": "316ff9bae7b00714c8e36b50f46e86b2c57ada2c0f501d4121a6ae25d3649ca6"
+    },
+    {
+      "path": "docs/legacy/QUICKSTART_PHASE2.md",
+      "status": "added",
+      "sha256": "106fc7a7e491bc9c28388394cac37c62ef0295d3d7df8d092c7d2e13d82ace54"
+    },
+    {
+      "path": "docs/legacy/README.md",
+      "status": "added",
+      "sha256": "6928c6fba0e225804c3a73ff761a6fae73f4936e423f4c7a90849426c0601436"
+    },
+    {
+      "path": "docs/legacy/ROADMAP_PHASE2_CONTINUATION.md",
+      "status": "added",
+      "sha256": "91dabddaec325f44a9b05350b16d19a37e14d0ef2f03730369fb589f4e8cb38f"
+    },
+    {
+      "path": "docs/legacy/SETTINGS_UNIFICATION.md",
+      "status": "added",
+      "sha256": "aec76b61c5fb853e9f95fda5225d30136130cfd5e5d68584666320b8b75899c6"
+    },
+    {
+      "path": "docs/legacy/TESTING.md",
+      "status": "added",
+      "sha256": "8bbbdc8abef15d38066803cc0d6ce22d4cfb43905c6896dea082d5bce61b837e"
+    },
+    {
+      "path": "docs/legacy/TESTING_FLOATING_WINDOWS.md",
+      "status": "added",
+      "sha256": "471add870c41ace7a80d8c4f63eab82719834e021b5fc4c24623bfcf9da87a50"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-09-27-modernization.md",
+      "status": "modified",
+      "sha256": "7d431761b516bec3347e6d0a620e3c733360674f51e199c73c81c578a765c222"
+    },
+    {
+      "path": "docs/verification/01-validation-before.txt",
+      "status": "added",
+      "sha256": "aa04693cced3f66ca0b8b995cc332823b320c40a807669afc83102607ba59c2c"
+    },
+    {
+      "path": "docs/verification/02-parser-before.txt",
+      "status": "added",
+      "sha256": "492beeffee1f4794481f818d4ec450a7163359c8a6a8c29ce6eb61eca32df656"
+    },
+    {
+      "path": "docs/verification/03-validation-parser-after.txt",
+      "status": "added",
+      "sha256": "1e1d20772545c285ddc710a0c97d56d57d9d5da29273f9586a44004c3ca31ad1"
+    },
+    {
+      "path": "docs/verification/04-storage-before.txt",
+      "status": "added",
+      "sha256": "e02a48a3a9d0f023afefc821cc12219139e6a46a8c924438390063c52e8b2d64"
+    },
+    {
+      "path": "docs/verification/05-core-after.txt",
+      "status": "added",
+      "sha256": "4825a99e7db5924599d864a5c79ac8f46993d990cdc4748b705a5c6008902058"
+    },
+    {
+      "path": "docs/verification/06-connections-before.txt",
+      "status": "added",
+      "sha256": "05209266c62f4005a286653ca4f3779cae05f5bf7d2efdec55e734ac7a60da31"
+    },
+    {
+      "path": "docs/verification/07-services-after.txt",
+      "status": "added",
+      "sha256": "7238c76236333b679ed78143c540334d4412897298cfd354c4bec6f1d28fc627"
+    },
+    {
+      "path": "docs/verification/08-ingress-before.txt",
+      "status": "added",
+      "sha256": "a6bba5fa00c44dae633128dda83281469d62d48763d24a17a5f9c81439f8674b"
+    },
+    {
+      "path": "docs/verification/09-chart-math-before.txt",
+      "status": "added",
+      "sha256": "6c1916682df68dd6e3fc060f9ecfc38c2cfd61bdf25110428114417d2c83d81a"
+    },
+    {
+      "path": "docs/verification/10-chart-math-after.txt",
+      "status": "added",
+      "sha256": "1899c01a120d75c1a79ed12d109e8841ffdd86920faeeeaddd827bca27979f5d"
+    },
+    {
+      "path": "docs/verification/11-review-before.txt",
+      "status": "added",
+      "sha256": "56258982a135b40dc85f32996dee7f508851dfa56dacdda356951c48ead495de"
+    },
+    {
+      "path": "docs/verification/12-review-after.txt",
+      "status": "added",
+      "sha256": "56ff4027d5513e94a3b946749c85aa7548dc35f1048a83e06906c7b21f3bbbf5"
+    },
+    {
+      "path": "docs/verification/13-integrated-core.txt",
+      "status": "added",
+      "sha256": "7bbbca46fa123f0742382cef1a626c259b37e6ed30a4bd55c75f89b40b5af5e5"
+    },
+    {
+      "path": "docs/verification/14-workspace-before.txt",
+      "status": "added",
+      "sha256": "1f3b73f8221a11e488a4eac7e59c1e64df0881dcc718ce82b5d9e7bf71f8b632"
+    },
+    {
+      "path": "docs/verification/15-suite-after.txt",
+      "status": "added",
+      "sha256": "3bc16f51aca5b5368585e689d30dd46ae4cf06655f12a23a2d7ecb708da68023"
+    },
+    {
+      "path": "docs/verification/16-suite.txt",
+      "status": "added",
+      "sha256": "33b1ed5365e113902f140fbe58ff1a32351386c1c9015aee13b5fb244112dce3"
+    },
+    {
+      "path": "docs/verification/17-qml-js-syntax.txt",
+      "status": "added",
+      "sha256": "3e9c3d9b2cc1fc690f602fed40d16c26f7f5dadf7ab6a535f380d66dc7a8f2f9"
+    },
+    {
+      "path": "docs/verification/18-api-contracts.txt",
+      "status": "added",
+      "sha256": "68f7f8f825b99dfc291d55074fa8c476f3f7002883e9f64181da6e2c4c85131e"
+    },
+    {
+      "path": "docs/verification/19-retention-stress.json",
+      "status": "added",
+      "sha256": "9c4eb2f69659c26a8e176a4adf2f41fd75263ced39007bfbd37725d778dcba41"
+    },
+    {
+      "path": "docs/verification/FINAL_CHECKS.txt",
+      "status": "added",
+      "sha256": "418b34040abffc1ff8fc1d164f76f4f3808ac9c45ce1c542f6b3089b2efa3ee1"
+    },
+    {
+      "path": "pyproject.toml",
+      "status": "added",
+      "sha256": "f2aea736f7f8dfd744b06ef4e4298c0cccca06832741111bab8a0a2aa26c96e7"
+    },
+    {
+      "path": "python/Backend/backend.py",
+      "status": "modified",
+      "sha256": "ffbc689afcd89b8fb05051a60e1d1b452d95aa39ceb1ba2d4397eb2e45487213"
+    },
+    {
+      "path": "python/Backend/connection_service.py",
+      "status": "added",
+      "sha256": "c68e2cce7d098c7d53a0affa04ca46c83033a4be86d8e44274ce588eb21eea20"
+    },
+    {
+      "path": "python/Backend/export_worker.py",
+      "status": "added",
+      "sha256": "26e4a5ffe9b456c616789befcade78c5df80f818293ecee22c9dd587d422f625"
+    },
+    {
+      "path": "python/Backend/series_bridge.py",
+      "status": "added",
+      "sha256": "54a7079ecda84ca797597d120d24f25021da4877e3e103c4457ccd9f6f5f225b"
+    },
+    {
+      "path": "python/Core/__init__.py",
+      "status": "added",
+      "sha256": "00b6375ff50a9a349c6ff37ad482c5849c5dcbf624322abbc46f9a1d981a8acd"
+    },
+    {
+      "path": "python/Core/buffering.py",
+      "status": "added",
+      "sha256": "630d0653feb25cce1dbfabf893d0352c0495101d00b2b0f84b00c94945076347"
+    },
+    {
+      "path": "python/Core/configuration.py",
+      "status": "added",
+      "sha256": "44dc13ee9a39ddffc8f5eaf74de1949fe309ff4c2284c8a37018d8a5bccdc98d"
+    },
+    {
+      "path": "python/Core/ingress.py",
+      "status": "added",
+      "sha256": "86a4c18f801f0b2039e54d5c5415d8d92d9132f8d1c4e8232cf0be8f4079c1b2"
+    },
+    {
+      "path": "python/Core/parsing.py",
+      "status": "added",
+      "sha256": "f56660051c23729afc930cfbb6fb63fb382946ca8cd97f500c3a768ee0f1d9b2"
+    },
+    {
+      "path": "python/Core/paths.py",
+      "status": "added",
+      "sha256": "1ee8a0f8c109f10952ec5f687c71d73b89bd4661dbb96e82213faa4ed614a52d"
+    },
+    {
+      "path": "python/Core/samples.py",
+      "status": "added",
+      "sha256": "c18fe323cc1c2c4c23763a5ef29407902bb5996f17b58aa7011556dd83fbd0b9"
+    },
+    {
+      "path": "python/Core/workspace.py",
+      "status": "added",
+      "sha256": "58101f36a596d204e10edb2a885936a41178699e0a1a1294c4622214cd1d2813"
+    },
+    {
+      "path": "python/Logger/logger.py",
+      "status": "modified",
+      "sha256": "e26ff7f03b770020ef155f3e03e3e8fe8b4586b7cb0be9a0eceda441c43aa582"
+    },
+    {
+      "path": "python/Studio/studio.py",
+      "status": "modified",
+      "sha256": "ffc9996bf87818247877c6b0891f01c5b680f329f493a6c466dab6609a9fbcc7"
+    },
+    {
+      "path": "python/Receiver/message.py",
+      "status": "modified",
+      "sha256": "66f340600b0b6036119e8ec06986fe65c665d1dca61108b7e0ced2624c665946"
+    },
+    {
+      "path": "python/Receiver/mqtt_receiver.py",
+      "status": "modified",
+      "sha256": "14679ed5ad34e111ea452539dd185a63fdcb3c2d91e2d048e4d65a9c24ba0f6e"
+    },
+    {
+      "path": "python/Receiver/receiver.py",
+      "status": "modified",
+      "sha256": "d400a81361b0f31094cf1b0be3eaad7600cec05602b2dc886fd9da834cbf5ee1"
+    },
+    {
+      "path": "python/Receiver/receiver_thread.py",
+      "status": "modified",
+      "sha256": "e51d14b40c71883073c88859244705e58112b5923b1ad4d883ea17caa8bbcc60"
+    },
+    {
+      "path": "python/Receiver/serial_receiver.py",
+      "status": "modified",
+      "sha256": "10336fcddea46b92ef71e7638c05e3db757aa6c0e602d5a5e886a5ab95e7981f"
+    },
+    {
+      "path": "python/Receiver/telnet_receiver.py",
+      "status": "modified",
+      "sha256": "cdaf6ec4aa50a4ea6d3044046cce5c6c5e41b387eda46f9ee83e252a6d6aa28c"
+    },
+    {
+      "path": "python/Receiver/test_receiver.py",
+      "status": "modified",
+      "sha256": "5cee3c5ab3f94563a89f0dbec4bb1860577b6c8f5062edc1f2bf77b8bf00cd47"
+    },
+    {
+      "path": "python/main.py",
+      "status": "modified",
+      "sha256": "c474894f2ff24a64390c603326579bb69ce4bc05615440da1dcf7353b5184896"
+    },
+    {
+      "path": "qml/content/App.qml",
+      "status": "modified",
+      "sha256": "36067a24fa098f348ced06b7186556c65ca60f21bc2f197f078d648bfe7690c8"
+    },
+    {
+      "path": "qml/content/AppUi.qml",
+      "status": "modified",
+      "sha256": "999a19f8f87c1413746e32564dc9931ba3acb1b7f6a56faf0bcddc16fede44f3"
+    },
+    {
+      "path": "qml/content/ChartTypes/ChartCursor.qml",
+      "status": "added",
+      "sha256": "1c219e8014537cbe4d55d0d2f8ed98be09b366afe8c4ff4ef8daecf899cff05b"
+    },
+    {
+      "path": "qml/content/ChartTypes/ChartMath.js",
+      "status": "added",
+      "sha256": "63dcfa5eed5fd174d09b83b52f7bc3dd3893881f9bca2468f8855bc43aab61ac"
+    },
+    {
+      "path": "qml/content/ChartTypes/TimeSeriesRenderer.qml",
+      "status": "modified",
+      "sha256": "fc21b38591578781d9d21e7c216bb3d988027eb9ba087fb107929c18a25bf33c"
+    },
+    {
+      "path": "qml/content/ChartTypes/XYChartRenderer.qml",
+      "status": "modified",
+      "sha256": "f7bfc75a824d48008e77a952b8265e7ee1a19d9cbd7bcaf61de119a8a7084e22"
+    },
+    {
+      "path": "qml/content/ChartWindow/ConnectionManager/CanSettings.qml",
+      "status": "modified",
+      "sha256": "54ebd36efa58b4446bfdfe441edbdb82bfd8018ec6ff7d07a54a16bafd0769b9"
+    },
+    {
+      "path": "qml/content/ChartWindow/ConnectionManager/ConnectionItem.qml",
+      "status": "modified",
+      "sha256": "9ef39a3ae6105cc7f19bf42e2e581f5fe6c9e7d339595469d7ac34f6c425eb9c"
+    },
+    {
+      "path": "qml/content/ChartWindow/ConnectionManager/ConnectionManagerDialog.qml",
+      "status": "modified",
+      "sha256": "deb5b3dfeea4283f0af3da7a6475452f55079a29d7ded4c0c7962560aa0c1976"
+    },
+    {
+      "path": "qml/content/ChartWindow/ConnectionManager/EditConnectionDialog.qml",
+      "status": "modified",
+      "sha256": "95189b805bbce2db7dcb10f67a5f85614632ccb5a13ebc0d6a06754cc07e0beb"
+    },
+    {
+      "path": "qml/content/ChartWindow/ConnectionManager/MqttSettings.qml",
+      "status": "modified",
+      "sha256": "4a3d2494b1925182103a5493b92480488d49b2af051d465fd13426751bdf4ca6"
+    },
+    {
+      "path": "qml/content/ChartWindow/ConnectionManager/NewConnectionDialog.qml",
+      "status": "modified",
+      "sha256": "bd4fab0d7c1d6eddfed87f3140e8aad6060203db71fc5a648c42f8d561f5d05f"
+    },
+    {
+      "path": "qml/content/ChartWindow/ConnectionManager/SerialSettings.qml",
+      "status": "modified",
+      "sha256": "b39c09d8a0417bdf870b4975f780876e7e9c649302e112e23cd8b379676a904d"
+    },
+    {
+      "path": "qml/content/ChartWindow/ConnectionManager/TelnetSettings.qml",
+      "status": "modified",
+      "sha256": "e0a580b14e4ef9e496c7a66219db2be5536558024977263c7c8332fe057fba9e"
+    },
+    {
+      "path": "qml/content/ChartWindow/ConnectionManager/TestSettings.qml",
+      "status": "modified",
+      "sha256": "e6e32dc05562423b4a7b56c8c4b8b4e1347ade859db6f2c5c4d0a2f669bad696"
+    },
+    {
+      "path": "qml/content/ChartWindow/ZoomButtons/ZoomButtons.qml",
+      "status": "modified",
+      "sha256": "6efb2bb88e604fe5b1c9bae127d8913c685bc5852a6cf842ee290c61a73c6712"
+    },
+    {
+      "path": "qml/content/ChartWindow/ZoomButtons/ZoomButtonsUi.ui.qml",
+      "status": "modified",
+      "sha256": "12b9efb7d0ed8da7b2482566bc9aaf6cd2c2d37561dcbb464d09ee90701e186a"
+    },
+    {
+      "path": "qml/content/FloatingWindows/FloatingChartWindow.qml",
+      "status": "modified",
+      "sha256": "242c1f6290c917d54494d32fc071ff28ead27a372e712ad138d7c835040aec6d"
+    },
+    {
+      "path": "qml/content/Footer/Footer.qml",
+      "status": "modified",
+      "sha256": "4fb0e9869986ec592a841a73fcab088b2a735598b1299e87812e3319019fcdb2"
+    },
+    {
+      "path": "qml/content/MainMenu/MainMenu.qml",
+      "status": "modified",
+      "sha256": "854950ef8a83b0827295e141be89ff66636d635bc8252656d043bbb32c18a14c"
+    },
+    {
+      "path": "qml/content/MainMenu/MainMenuUi.ui.qml",
+      "status": "modified",
+      "sha256": "6a92f152a9fe1286e527b8a9e181975ec3b4a1a95ccc6727d933f400ccaa8463"
+    },
+    {
+      "path": "qml/content/Settings/SettingsUi.ui.qml",
+      "status": "modified",
+      "sha256": "5fc28aecde07398aeb3b7f6f5d1c759d364e1a30f134e7c05aa1146dd51b7641"
+    },
+    {
+      "path": "qml/content/StatusIndicator/StatusIndicator.qml",
+      "status": "modified",
+      "sha256": "5cdca6f5135f28bf8940b1aae286a4f37710534234ef58ad70c17cd7f2e989e2"
+    },
+    {
+      "path": "qml/content/StatusIndicator/StatusIndicatorUi.ui.qml",
+      "status": "modified",
+      "sha256": "b3dbdcbb87c95f55c296f53669cb3c62b6f2ca5480b35f99df8870f8112e35ff"
+    },
+    {
+      "path": "qml/content/Theme/AppTheme.qml",
+      "status": "modified",
+      "sha256": "2baca17e17992d81b5c76bb1427ef8708f81193425fb55b239ecae521d23314b"
+    },
+    {
+      "path": "qml/content/Toolbar/ToolbarUi.ui.qml",
+      "status": "modified",
+      "sha256": "ebcd56211cf9173d6cf5c5f01ebf22d7a21b22618288278e9bc3c951cc9d7477"
+    },
+    {
+      "path": "qml/content/Workbench/AssignmentDialog.qml",
+      "status": "added",
+      "sha256": "73bf1b0bbdd7e46f8a2ca691d77aa65529e1ced880409f68937bb1b9443003cd"
+    },
+    {
+      "path": "qml/content/Workbench/ChartCreationDialog.qml",
+      "status": "added",
+      "sha256": "b9321896d4f8beb1a9cfd4134177621f98eedfa22eda3b34a5dba47f4f376e55"
+    },
+    {
+      "path": "qml/content/Workbench/ChartOptionsDialog.qml",
+      "status": "added",
+      "sha256": "8a74e4c05c133dcc81071d105156243d5015c030c54400a0aff1cea86feadc3d"
+    },
+    {
+      "path": "qml/content/Workbench/PreferencesDialog.qml",
+      "status": "added",
+      "sha256": "d5412c3c3971bc14925c5a2f24e8ffd2085d134ec6b9d4de4bae10e0226353cc"
+    },
+    {
+      "path": "qml/content/Workbench/StatisticsPane.qml",
+      "status": "added",
+      "sha256": "8e62e60b261eef9056300169808fbe3050d2d528544ae640d38a9e16a242220c"
+    },
+    {
+      "path": "qml/content/Workbench/WorkspacePanel.qml",
+      "status": "added",
+      "sha256": "5ca2a1319537cf94e3728a015189339c5038c796a8f8b20b484986a2ab2e9fdf"
+    },
+    {
+      "path": "qml/content/Workspace/ChartWorkspace.qml",
+      "status": "modified",
+      "sha256": "76f136bbd344c7e9b282a08fa10c06f41ae34cfb524dcd7a1a962de1a2b76158"
+    },
+    {
+      "path": "qml/content/Workspace/WorkspaceController.qml",
+      "status": "modified",
+      "sha256": "7b82c670da1cb3afb3613faaad6270879a31a33dd89b55688595c9529c194065"
+    },
+    {
+      "path": "qml/imports/Backend/BackendLogger.js",
+      "status": "modified",
+      "sha256": "0aceb19f4cc168b198e37b81f5115d6eab59a859cbfa9041acb31cee84bcbd7d"
+    },
+    {
+      "path": "qml/imports/Backend/BackendTxSignals.qml",
+      "status": "modified",
+      "sha256": "3f22acdab01737b8d632467a393508bb3745091ec7b4a8754c8f23067c1fb67a"
+    },
+    {
+      "path": "qml/imports/Backend/Simulator/Simulator.js",
+      "status": "modified",
+      "sha256": "e2a07e152fe8eebaf3f90487080b676706a5a8e2726f517d180be1e9c491b4a3"
+    },
+    {
+      "path": "qml/imports/Common/Base.js",
+      "status": "modified",
+      "sha256": "75c88c4a2a0513841d48529468c6c87742708c8a9c2b77142f1da148637a8afa"
+    },
+    {
+      "path": "qml/imports/Common/Constants.js",
+      "status": "modified",
+      "sha256": "d87eef98d6113d231919f6e82ed422b1132d12bdb01976e5cc4a042b54798129"
+    },
+    {
+      "path": "qml/imports/Common/Constants.qml",
+      "status": "modified",
+      "sha256": "545e2200c061fe15a7cc9ebc3323f06ca179d03773df8ad6b66eee446ae48d8d"
+    },
+    {
+      "path": "qml/imports/Common/DataGen.js",
+      "status": "modified",
+      "sha256": "b4ba70859306b23d10ea9a3d57425b3117b90d4867c7940cfa134f62394c2456"
+    },
+    {
+      "path": "qml/imports/Common/DirectoryFontLoader.qml",
+      "status": "modified",
+      "sha256": "acfd420cbc51701beb7386abaff4404c128fda045c43c91efbf392d72f4f508e"
+    },
+    {
+      "path": "qml/imports/Common/Random.js",
+      "status": "modified",
+      "sha256": "69cd3b188bcff1c5cbbad8556ade2c6a5ed10e8811e381da18dcb6be11dfb53e"
+    },
+    {
+      "path": "qml/imports/Common/Timer.js",
+      "status": "modified",
+      "sha256": "a3dec2e7fd23b2b08f03cc8052d5cee954bf4e52e71f9b5f127889de12d62e3e"
+    },
+    {
+      "path": "qml/imports/DataModels/SerialDataModels/ComPortModel.qml",
+      "status": "modified",
+      "sha256": "d895a4416bdac14b53e37055efba1dae9033b519388c18b9640df83511ed69f0"
+    },
+    {
+      "path": "qml/imports/DataModels/SerialDataModels/ConnectionModel.qml",
+      "status": "modified",
+      "sha256": "ed1ce045c36cbd3064935d854c8c1c87400a935bb1a5094ac938aac86d48fae5"
+    },
+    {
+      "path": "qml/imports/DataModels/SerialDataModels/DataSizeModel.qml",
+      "status": "modified",
+      "sha256": "7dde834a41d240128b0ee00e532bc0dc3ee8e3d470589bf95a8f1d655df13c03"
+    },
+    {
+      "path": "qml/imports/DataModels/SerialDataModels/ParityBitsModel.qml",
+      "status": "modified",
+      "sha256": "e4c0916807d9e54e56032a151e0c7308fd6b0cd60f46a934997b68c1ac66e332"
+    },
+    {
+      "path": "qml/imports/DataModels/SerialDataModels/StopBitsModel.qml",
+      "status": "modified",
+      "sha256": "1a9dcc2f763dd9c3cc6c26f64652e71a656d86b5b5789d8cd66832683fbe8d9d"
+    },
+    {
+      "path": "qml/imports/KymoUi/App.js",
+      "status": "modified",
+      "sha256": "f0d319d375b4ff5710243c70a95dbde6b43eb7bb682191b4e77f9f3bf80a4b6c"
+    },
+    {
+      "path": "qml/imports/KymoUi/EventListModel.qml",
+      "status": "modified",
+      "sha256": "8043b3c5fd64bf42d649eec792e39fcc708d6291d7f0ffb71df077a73f505b07"
+    },
+    {
+      "path": "qml/imports/KymoUi/EventListSimulator.qml",
+      "status": "modified",
+      "sha256": "5c67abb68f747f49ad8d660924d211f21885696fe12ee0dca8cd1b4a7a4d1791"
+    },
+    {
+      "path": "qml/main.qml",
+      "status": "modified",
+      "sha256": "555ac76deba369ca5ba59213733a11d0762ddc4f91dc0f22b0f7f277194f7152"
+    },
+    {
+      "path": "qml/tests/main.qml",
+      "status": "modified",
+      "sha256": "69c82e5450c3e91c109b2f20643757b909ddad93b1cb1ba63b7f4c458df6a616"
+    },
+    {
+      "path": "requirements-dev.txt",
+      "status": "added",
+      "sha256": "5e80794bcc6d2549958645e311fe2e150307ca42d1a05b154959c044697327ad"
+    },
+    {
+      "path": "requirements.txt",
+      "status": "modified",
+      "sha256": "a7fe3c6e27e3f5ff86fc1bbcc7fa4cb7291e30cdad5d22faeab54c06c823c573"
+    },
+    {
+      "path": "run.py",
+      "status": "added",
+      "sha256": "c08cec2a85e54aa378bfd9c6ab3dda986e450a9398bd6fd968677f5aff91a2e0"
+    },
+    {
+      "path": "start_windows.bat",
+      "status": "added",
+      "sha256": "57171e959b77aec860ce228de30da121f47aeaa81e05e5f286895a969a922bc7"
+    },
+    {
+      "path": "tests/conftest.py",
+      "status": "added",
+      "sha256": "4d4ba77989875c1312d8343e9739974d31c748361488754c320f9de62fe4e4e6"
+    },
+    {
+      "path": "tests/js/chart_math.test.cjs",
+      "status": "added",
+      "sha256": "5430b558714c942de35da40f03bddd7cc5616ca13d57e1dfb5b9ca4d1192112c"
+    },
+    {
+      "path": "tests/test_binary_protocol.py",
+      "status": "modified",
+      "sha256": "dc1fc6959f210fdcc1c7cad9aa4af8dd8a5a75eb0e5696cad19afbbb986aabdb"
+    },
+    {
+      "path": "tests/test_chart_coordinate_modes.py",
+      "status": "modified",
+      "sha256": "4fa60b3f0dba69229660656b98098dab42c4882e2ea693daed81602e585889e7"
+    },
+    {
+      "path": "tests/test_configuration_service.py",
+      "status": "added",
+      "sha256": "eba24165758a02ca744ffe91f6f669e87080ee1b1edbd327e3c746c21d0e5a74"
+    },
+    {
+      "path": "tests/test_connection_service.py",
+      "status": "added",
+      "sha256": "0f1810213fabc67e1ea7553d648050289e2d5f9ac14423aa53c85034bf41f233"
+    },
+    {
+      "path": "tests/test_ingress.py",
+      "status": "added",
+      "sha256": "a1a7a3f2c13e1987a48c706e649bca4788dfd915b42d62b29c72be54221f3fee"
+    },
+    {
+      "path": "tests/test_payload_parser.py",
+      "status": "added",
+      "sha256": "154178d3f1449ef5e5db84ae6ae81155878cc84cba493e3ac63b0144da3df9d5"
+    },
+    {
+      "path": "tests/test_python_contracts.py",
+      "status": "modified",
+      "sha256": "30cb69896489d07bb5325aa2536dba2d46c3a1f14cecdc26d4f2c2ba639cb2a9"
+    },
+    {
+      "path": "tests/test_qml_architecture.py",
+      "status": "added",
+      "sha256": "0959bd14c531d56686060d48ba002471feb6733293fcc6bc6e2f678755da2f42"
+    },
+    {
+      "path": "tests/test_qt_workbench_integration.py",
+      "status": "added",
+      "sha256": "1a4991c97c82ecc49b8c440c770174550f39b0f57abaf15cd04b6597eba8fe10"
+    },
+    {
+      "path": "tests/test_storage.py",
+      "status": "added",
+      "sha256": "b65f31ac1a46676e028831dc421135a3a797ac501cb0f34c37fc18088cfccb99"
+    },
+    {
+      "path": "tests/test_transport_protocol.py",
+      "status": "added",
+      "sha256": "22c600093bbc6e3d326d39d86084352ac80b6fe26f14ba4c928cefad5d1f83eb"
+    },
+    {
+      "path": "tests/test_ui_architecture_regressions.py",
+      "status": "modified",
+      "sha256": "70d14928a9e24f21bf3c57218a8a18018c54972ca372c19ab14a4addc5bd8f1f"
+    },
+    {
+      "path": "tests/test_workspace_validation.py",
+      "status": "added",
+      "sha256": "9eaf084d631ae56e611faf772f4481ba44bcd4abdcbd8fa2d397c17cba746d55"
+    },
+    {
+      "path": "tools/benchmark_core.py",
+      "status": "added",
+      "sha256": "7316ee19a647cae816cf266ac44ac84305dcb9029058c4cab37e2234889b142f"
+    },
+    {
+      "path": "tools/check_backend_contracts.py",
+      "status": "added",
+      "sha256": "60eaa9b60d230fdb9a1955bf1f84b6bae706ee9d5058f457456a4534295d38d6"
+    },
+    {
+      "path": "tools/check_qml_scripts.cjs",
+      "status": "added",
+      "sha256": "558b4059b94954b40409b2333ef3b82693379e5729298fda03d8299dc0f245b9"
+    }
+  ]
+}

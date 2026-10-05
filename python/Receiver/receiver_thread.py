@@ -1,24 +1,50 @@
-from PySide6.QtCore import QThread, Signal, Slot,QObject
+"""Cooperative worker contract with interruptible reconnect backoff."""
+from threading import Event
 from typing import Optional
+
+from PySide6.QtCore import QObject, QThread, Signal, Slot
 
 
 class ReceiverThread(QThread):
-
     new_data = Signal(bytes)
     stop_event = Signal()
+    connection_state = Signal(bool)
 
     def __init__(self, parent: Optional[QObject] = None) -> None:
-        super(ReceiverThread, self).__init__(parent)
-        self.__stop: bool = False
+        super().__init__(parent)
+        self._stop_requested = Event()
+        self._sink = None  # set by Receiver.attach_thread; called in this thread
         self.stop_event.connect(self.on_stop)
 
-    def stop(self):
-        pass
-    
-    def stopped(self):
-        return self.__stop    
+    def publish(self, messages) -> None:
+        """Hand framed messages to the owning receiver in one call.
+
+        A Qt signal per message costs far more than parsing the message, so the
+        attached receiver installs a thread-safe sink; without one every message
+        is still emitted through ``new_data``.
+        """
+        if not messages:
+            return
+        sink = self._sink
+        if sink is not None:
+            sink(messages)
+        else:
+            for message in messages:
+                self.new_data.emit(message)
+
+    def stop(self) -> None:
+        self._stop_requested.set()
+        self.requestInterruption()
+
+    def stopped(self) -> bool:
+        return self._stop_requested.is_set() or self.isInterruptionRequested()
+
+    def interruptible_wait(self, seconds: float) -> bool:
+        """Return True immediately when shutdown interrupts a retry delay."""
+        return self._stop_requested.wait(max(0.0, seconds))
 
     @Slot()
-    def on_stop(self):
-        self.__stop = True
+    def on_stop(self) -> None:
+        self._stop_requested.set()
+        self.requestInterruption()
         self.stop()

@@ -12,6 +12,18 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": ["-qmljsdebugger=port:10002,block",]
+        },
+        {
+            "name": "Python: main.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/python/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${workspaceFolder}/python",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/python"
+            }
         }
     ]
 }

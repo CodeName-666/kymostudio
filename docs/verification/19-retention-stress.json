@@ -1,0 +1,10 @@
+{
+  "scope": "raw-store + display-queue only; no Qt or transport",
+  "input_samples": 300000,
+  "signals": 32,
+  "raw_retained": 250000,
+  "raw_evicted": 50000,
+  "display_retained": 131072,
+  "elapsed_seconds": 1.965,
+  "python": "3.13.5"
+}

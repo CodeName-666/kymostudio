@@ -1,0 +1,3 @@
+Module Common
+singleton Constants 1.0 Constants.qml
+singleton Validators 1.0 Validators.qml

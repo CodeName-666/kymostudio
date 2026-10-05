@@ -1,0 +1,27 @@
+
+==================================== ERRORS ====================================
+____________________ ERROR collecting tests/test_storage.py ____________________
+ImportError while importing test module '/mnt/data/PlotterApp_Optimized/tests/test_storage.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_storage.py:5: in <module>
+    from Core.samples import Sample, SampleStore, export_csv
+E   ModuleNotFoundError: No module named 'Core.samples'
+_____________ ERROR collecting tests/test_configuration_service.py _____________
+ImportError while importing test module '/mnt/data/PlotterApp_Optimized/tests/test_configuration_service.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_configuration_service.py:4: in <module>
+    from Core.configuration import atomic_json_write, validate_configuration, local_path, ConfigurationRepository
+E   ModuleNotFoundError: No module named 'Core.configuration'
+=========================== short test summary info ============================
+ERROR tests/test_storage.py
+ERROR tests/test_configuration_service.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!
+2 errors in 0.22s

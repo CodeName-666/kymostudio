@@ -1,0 +1,43 @@
+PlotterApp final verification — 2026-09-27
+Python 3.13.5
+v22.16.0
+\n=== PYTHON TEST SUITE ===
+.......sss.............................................................. [ 54%]
+.............................................................            [100%]
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_chart_coordinate_modes.py:6: Install requirements-dev.txt to run Qt integration tests
+SKIPPED [1] tests/test_python_contracts.py:6: Install requirements-dev.txt to run Qt integration tests
+SKIPPED [1] tests/test_qt_workbench_integration.py:7: Real Qt integration requires requirements-dev.txt
+SKIPPED [1] tests/test_transport_protocol.py:4: Install requirements-dev.txt to run Qt integration tests
+SKIPPED [1] tests/test_ui_architecture_regressions.py:6: Install requirements-dev.txt to run Qt integration tests
+SKIPPED [1] tests/test_binary_protocol.py:112: Separate PlotterEcu sources were not included in the uploaded archive
+SKIPPED [1] tests/test_binary_protocol.py:85: Separate PlotterEcu sources were not included in the uploaded archive
+SKIPPED [1] tests/test_binary_protocol.py:100: Separate PlotterEcu sources were not included in the uploaded archive
+130 passed, 8 skipped in 0.30s
+\n=== PYTHON COMPILE ===
+Python syntax compilation passed
+\n=== CHART MATH ===
+12 chart-math checks passed
+\n=== QML-EMBEDDED JAVASCRIPT (NOT QML TYPE CHECK) ===
+100 QML/JS files examined: 11 standalone scripts and 467 embedded JavaScript functions parse successfully.
+QML type resolution, declarative bindings, native APIs and rendering are NOT checked here. Run the Qt smoke test.
+\n=== API NAME CONTRACTS ===
+40 distinct file/API call pairs checked: all referenced Backend methods exist.
+Qt Slot overload resolution is covered only by the real Qt smoke/integration tests.
+\n=== RETENTION STRESS (NOT GUI FPS) ===
+{
+  "scope": "raw-store + display-queue only; no Qt or transport",
+  "input_samples": 300000,
+  "signals": 32,
+  "raw_retained": 250000,
+  "raw_evicted": 50000,
+  "display_retained": 131072,
+  "elapsed_seconds": 1.988,
+  "python": "3.13.5"
+}
+\n=== DIFF WHITESPACE CHECK ===
+No whitespace errors
+\n=== REAL QT SMOKE TEST ATTEMPT ===
+Fehlendes Paket: PySide6
+Abhängigkeiten installieren: python -m pip install -r requirements.txt
+Smoke-test command exit code: 1 (missing PySide6 means NOT EXECUTED, not passed)

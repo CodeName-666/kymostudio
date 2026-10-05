@@ -1,0 +1,12 @@
+.......sss.............................................................. [ 54%]
+.............................................................            [100%]
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_chart_coordinate_modes.py:6: Install requirements-dev.txt to run Qt integration tests
+SKIPPED [1] tests/test_python_contracts.py:6: Install requirements-dev.txt to run Qt integration tests
+SKIPPED [1] tests/test_qt_workbench_integration.py:7: Real Qt integration requires requirements-dev.txt
+SKIPPED [1] tests/test_transport_protocol.py:4: Install requirements-dev.txt to run Qt integration tests
+SKIPPED [1] tests/test_ui_architecture_regressions.py:6: Install requirements-dev.txt to run Qt integration tests
+SKIPPED [1] tests/test_binary_protocol.py:112: Separate PlotterEcu sources were not included in the uploaded archive
+SKIPPED [1] tests/test_binary_protocol.py:85: Separate PlotterEcu sources were not included in the uploaded archive
+SKIPPED [1] tests/test_binary_protocol.py:100: Separate PlotterEcu sources were not included in the uploaded archive
+130 passed, 8 skipped in 0.25s
