@@ -139,7 +139,7 @@ for i in range(100):
 ser.close()
 ```
 
-**Config in PlotterApp**:
+**Config in KymoStudio**:
 - Interface: `Serial`
 - Port: `COM3` (gleicher wie im Script)
 - Baudrate: `9600`
@@ -169,7 +169,7 @@ ser = serial.Serial('/dev/pts/2', 9600)  # Linux
 ser = serial.Serial('COM10', 9600)  # Windows
 ```
 
-**PlotterApp verbindet zu**:
+**KymoStudio verbindet zu**:
 - Linux: `/dev/pts/3`
 - Windows: `COM11`
 
@@ -211,7 +211,7 @@ for i in range(100):
     time.sleep(0.1)
 ```
 
-**Config in PlotterApp**:
+**Config in KymoStudio**:
 - Interface: `MQTT`
 - Host: `localhost`
 - Port: `1883`

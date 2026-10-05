@@ -361,7 +361,7 @@ Rectangle {
                                 && floatingWindow.workspaceController.chartLineModel.hasLineForChart(floatingWindow.workspaceController.draggedSignalId, floatingWindow.chartId, modelData.field || null)
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-                            keys: ["plotter/signal"]
+                            keys: ["kymo/signal"]
                             function acceptSignal(uniqueId) {
                                 if (!assigned) floatingWindow.workspaceController.assignSignal(uniqueId, floatingWindow.chartId, modelData.field || null)
                             }

@@ -6,6 +6,6 @@
 #include <QtQml/qqmlextensionplugin.h>
 
 Q_IMPORT_QML_PLUGIN(contentPlugin)
-Q_IMPORT_QML_PLUGIN(PlotterUiPlugin)
+Q_IMPORT_QML_PLUGIN(KymoUiPlugin)
 Q_IMPORT_QML_PLUGIN(BackendPlugin)
 

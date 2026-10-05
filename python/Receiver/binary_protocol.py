@@ -1,4 +1,4 @@
-"""Compact Plotter Binary Protocol v6 codec and stream framing.
+"""Compact Kymotrace Binary Protocol v6 codec and stream framing.
 
 The module is the protocol seam shared by transport adapters and the backend.
 It deliberately exposes only point encoding/decoding and incremental framing;

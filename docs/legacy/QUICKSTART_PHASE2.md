@@ -1,4 +1,4 @@
-# PlotterApp - Phase 2 Quickstart Guide
+# KymoStudio - Phase 2 Quickstart Guide
 
 ## 🎯 Aktueller Stand (2025-12-11)
 
@@ -29,7 +29,7 @@
 
 ### Prompt für nächste Session:
 ```
-"Ich setze das PlotterApp-Projekt fort. Phase 2 Woche 2 ist abgeschlossen (2D Floating Windows).
+"Ich setze das KymoStudio-Projekt fort. Phase 2 Woche 2 ist abgeschlossen (2D Floating Windows).
 
 Bitte lies zuerst:
 1. ROADMAP_PHASE2_CONTINUATION.md (vollständige Fortsetzungsanleitung)
@@ -67,7 +67,7 @@ Branch ist feature/floating-multicharttype, Submodule nicht vergessen!"
 
 ```bash
 # Repository auschecken
-cd d:\Projekte\Python\Plotter\PlotterApp
+cd d:\Projekte\Python\Plotter\KymoStudio
 git checkout feature/floating-multicharttype
 git submodule update --init --recursive
 
@@ -175,7 +175,7 @@ QML (FloatingChartWindow)
 → Prüfe Pfad in FloatingChartWindow.qml `getChartRendererQml()`
 
 ### Fehler: "WindowManager is undefined"
-→ Prüfe plotter.py Zeile 41: `setContextProperty("WindowManager", ...)`
+→ Prüfe studio.py Zeile 41: `setContextProperty("WindowManager", ...)`
 
 ### 3D-Daten kommen nicht an
 → Prüfe Backend-Event-Routing und QML-Handler-Connections

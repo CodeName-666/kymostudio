@@ -62,17 +62,17 @@ class Logger(QObject):
     def log_message(self, type: str, msg, *args, **kwargs):
         if self.enabled:
             if(type == 'ERROR'):
-                logging.getLogger("PlotterApp").error(msg, *args, **kwargs)
+                logging.getLogger("KymoStudio").error(msg, *args, **kwargs)
             elif(type == 'WARN'):
-                logging.getLogger("PlotterApp").warning(msg, *args, **kwargs)
+                logging.getLogger("KymoStudio").warning(msg, *args, **kwargs)
             elif(type == 'INFO'):
-                logging.getLogger("PlotterApp").info(msg, *args, **kwargs)
+                logging.getLogger("KymoStudio").info(msg, *args, **kwargs)
             elif(type == 'DEBUG'):
-                logging.getLogger("PlotterApp").debug(msg, *args, **kwargs)
+                logging.getLogger("KymoStudio").debug(msg, *args, **kwargs)
             elif(type == 'STACK'):
-                logging.getLogger("PlotterApp").debug(msg, *args, **kwargs)
+                logging.getLogger("KymoStudio").debug(msg, *args, **kwargs)
             else:
-                logging.getLogger("PlotterApp").debug('INVALID LOG_TYPE: %s', msg)
+                logging.getLogger("KymoStudio").debug('INVALID LOG_TYPE: %s', msg)
 
         if self.console_log:
             try:
@@ -111,7 +111,7 @@ class Logger(QObject):
         """Use a bounded rotating log instead of an ever-growing project file."""
         self.enabled = bool(config.get("enabled", True))
         self.console_log = bool(config.get("console_log", False))
-        log = logging.getLogger("PlotterApp")
+        log = logging.getLogger("KymoStudio")
         log.propagate = False
         level = getattr(logging, str(config.get("level", "INFO")).upper(), logging.INFO)
         log.setLevel(level if isinstance(level, int) else logging.INFO)
@@ -119,7 +119,7 @@ class Logger(QObject):
             log.removeHandler(handler)
             handler.close()
         if self.enabled:
-            path = Path(config.get("name", "plotter.log"))
+            path = Path(config.get("name", "kymostudio.log"))
             try:
                 path.parent.mkdir(parents=True, exist_ok=True)
                 handler = RotatingFileHandler(path, maxBytes=2*1024*1024, backupCount=3, encoding="utf-8")

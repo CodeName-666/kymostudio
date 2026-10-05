@@ -1,4 +1,4 @@
-# Architektur der überarbeiteten PlotterApp
+# Architektur der überarbeiteten KymoStudio
 
 [Start / Bedienung](../README.md) · [Änderungen](../CHANGELOG.md) · [Testbericht](TESTBERICHT.md)
 
@@ -6,7 +6,7 @@
 
 | Ebene | Dateien | Aufgabe |
 |---|---|---|
-| Start | `run.py`, `python/main.py`, `python/Plotter/plotter.py` | Konfiguration und Qt starten; definierte Importpfade; QObject-/Engine-Lebensdauer. |
+| Start | `run.py`, `python/main.py`, `python/Studio/studio.py` | Konfiguration und Qt starten; definierte Importpfade; QObject-/Engine-Lebensdauer. |
 | Datenkern | `python/Core/parsing.py`, `Receiver/message.py` | Begrenzte Wire-Payloads parsen und Messwerte validieren; ohne QML. |
 | Pufferschichten | `Core/ingress.py`, `buffering.py`, `samples.py` | Threadgrenze, begrenzte Anzeige, unabhängiger begrenzter Rohdatenbestand. |
 | Persistenz | `Core/configuration.py`, `paths.py`, `workspace.py` | Vorlagen-/Benutzerpfade, atomare JSON-Dateien und validierte Workspace-Metadaten. |

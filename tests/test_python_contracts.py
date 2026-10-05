@@ -37,7 +37,7 @@ from Backend.Charts import (  # noqa: E402
 from Backend.backend import Backend  # noqa: E402
 from Receiver.can_receiver import (  # noqa: E402
     CanReceiver,
-    can_message_to_plotter_payload,
+    can_message_to_kymo_payload,
     decode_can_value,
 )
 from Receiver.registry import ReceiverRegistry  # noqa: E402
@@ -94,7 +94,7 @@ class CanReceiverTests(unittest.TestCase):
     def test_can_payload_normalization_supports_float_scaling(self) -> None:
         message = can.Message(arbitration_id=0x123, data=struct.pack("<f", 12.5))
         payload = json.loads(
-            can_message_to_plotter_payload(
+            can_message_to_kymo_payload(
                 message, {"value_format": "float32_le", "scale": 2, "offset": -1}
             )
         )
@@ -113,7 +113,7 @@ class CanReceiverTests(unittest.TestCase):
         receiver = ReceiverRegistry().create_receiver(
             {
                 "type": "CAN",
-                "default": {"interface": "virtual", "channel": "plotter-tests"},
+                "default": {"interface": "virtual", "channel": "kymo-tests"},
             }
         )
         self.assertIsInstance(receiver, CanReceiver)

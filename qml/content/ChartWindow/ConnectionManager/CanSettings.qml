@@ -25,7 +25,7 @@ ColumnLayout {
         FieldRow {
             label: qsTr("Kanal")
             required: true
-            TextField { id: channelField; Layout.preferredWidth: 200; text: "plotter"; placeholderText: qsTr("can0, PCAN_USBBUS1 …"); selectByMouse: true; Accessible.name: qsTr("Kanal") }
+            TextField { id: channelField; Layout.preferredWidth: 200; text: "kymo"; placeholderText: qsTr("can0, PCAN_USBBUS1 …"); selectByMouse: true; Accessible.name: qsTr("Kanal") }
         }
         FieldRow {
             label: qsTr("Bitrate")

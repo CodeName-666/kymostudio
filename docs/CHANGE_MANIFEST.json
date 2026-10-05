@@ -317,7 +317,7 @@
       "sha256": "e26ff7f03b770020ef155f3e03e3e8fe8b4586b7cb0be9a0eceda441c43aa582"
     },
     {
-      "path": "python/Plotter/plotter.py",
+      "path": "python/Studio/studio.py",
       "status": "modified",
       "sha256": "ffc9996bf87818247877c6b0891f01c5b680f329f493a6c466dab6609a9fbcc7"
     },
@@ -607,17 +607,17 @@
       "sha256": "1a9dcc2f763dd9c3cc6c26f64652e71a656d86b5b5789d8cd66832683fbe8d9d"
     },
     {
-      "path": "qml/imports/PlotterUi/App.js",
+      "path": "qml/imports/KymoUi/App.js",
       "status": "modified",
       "sha256": "f0d319d375b4ff5710243c70a95dbde6b43eb7bb682191b4e77f9f3bf80a4b6c"
     },
     {
-      "path": "qml/imports/PlotterUi/EventListModel.qml",
+      "path": "qml/imports/KymoUi/EventListModel.qml",
       "status": "modified",
       "sha256": "8043b3c5fd64bf42d649eec792e39fcc708d6291d7f0ffb71df077a73f505b07"
     },
     {
-      "path": "qml/imports/PlotterUi/EventListSimulator.qml",
+      "path": "qml/imports/KymoUi/EventListSimulator.qml",
       "status": "modified",
       "sha256": "5c67abb68f747f49ad8d660924d211f21885696fe12ee0dca8cd1b4a7a4d1791"
     },

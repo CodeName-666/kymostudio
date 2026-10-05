@@ -1,4 +1,4 @@
-# PlotterApp - Floating Multi-Chart-Type System
+# KymoStudio - Floating Multi-Chart-Type System
 ## Roadmap & Fortsetzungsanleitung für nächste Sessions
 
 ---
@@ -36,7 +36,7 @@
    - Abstrakte Basis für alle Chart-Typen
    - ChartType Enum (XY_LINE, XY_SCATTER, XYZ_SURFACE, XYZ_SCATTER)
 
-5. **3D Protocol Support** (`python/Receiver/message.py`, `../PlotterEcu/lib/PlotterLib/src/plotter.h/cpp`)
+5. **3D Protocol Support** (`python/Receiver/message.py`, `../KymoProbe/lib/KymoCore/src/kymo.h/cpp`)
    - PlotDataPoint mit z_value für 3D-Daten
    - send3D() Methoden in embedded library
 
@@ -80,7 +80,7 @@
 ### Test-Befehle:
 ```bash
 # Anwendung starten
-cd d:\Projekte\Python\Plotter\PlotterApp
+cd d:\Projekte\Python\Plotter\KymoStudio
 python python/main.py
 
 # In der Anwendung:
@@ -138,7 +138,7 @@ import QtQuick3D 6.4  // Alternative zu Qt3D
 
 #### 3. Z-Achsen-Datenrouting implementieren (🟡 Priorität: MITTEL)
 **Dateien:**
-- `python/Plotter/plotter.py` oder neuer Chart Controller
+- `python/Studio/studio.py` oder neuer Chart Controller
 - `python/Backend/Charts/` - Neue Chart-Verwaltung
 
 **Aufgabe:**
@@ -149,7 +149,7 @@ import QtQuick3D 6.4  // Alternative zu Qt3D
 
 **Events erweitern:**
 ```python
-# In plotter.py oder neuem Controller
+# In studio.py oder neuem Controller
 signals:
     append_graph_point_3d = Signal(str, object)  # (chartId, point with x,y,z)
     append_graph_points_batch_3d = Signal(str, list)  # (chartId, list of [x,y,z])
@@ -288,7 +288,7 @@ Shortcut {
 ## 📂 Projekt-Struktur-Übersicht
 
 ```
-PlotterApp/
+KymoStudio/
 ├── python/
 │   ├── Backend/
 │   │   ├── Windows/
@@ -301,8 +301,8 @@ PlotterApp/
 │   │       └── xyz_chart.py                🔴 TODO
 │   ├── Receiver/
 │   │   └── message.py                      ✅ 3D-Support (z_value)
-│   ├── Plotter/
-│   │   └── plotter.py                      ✅ WindowManager integriert
+│   ├── Kymo/
+│   │   └── studio.py                      ✅ WindowManager integriert
 │   └── main.py                             ✅ WindowManager initialisiert
 │
 ├── qml/                                    (Submodule)
@@ -320,8 +320,8 @@ PlotterApp/
 │
 ├── embedded/
 │   └── common/
-│       ├── plotter.h                       ✅ send3D() Methoden
-│       └── plotter.cpp                     ✅ 3D Protocol
+│       ├── kymo.h                       ✅ send3D() Methoden
+│       └── kymo.cpp                     ✅ 3D Protocol
 │
 ├── FLOATING_MULTICHARTTYPE_REDESIGN.md     ✅ Haupt-Designdokument
 ├── TESTING_FLOATING_WINDOWS.md             ✅ Test-Anleitung
@@ -344,7 +344,7 @@ PlotterApp/
 **Empfohlener Start:**
 1. Branch auschecken:
    ```bash
-   cd d:\Projekte\Python\Plotter\PlotterApp
+   cd d:\Projekte\Python\Plotter\KymoStudio
    git checkout feature/floating-multicharttype
    git submodule update --init --recursive
    ```
@@ -402,11 +402,11 @@ function getChartRendererQml(chartType) {
 ```
 
 ### 2. Backend Chart-Daten-Routing
-**Datei:** `python/Plotter/plotter.py` oder neuer Controller
+**Datei:** `python/Studio/studio.py` oder neuer Controller
 
 **Aktuell:** Nur 2D-Daten-Events
 ```python
-# In Backend oder Plotter:
+# In Backend oder Kymo:
 events.append_graph_point.connect(qml_handler)  # 2D only
 ```
 
@@ -417,7 +417,7 @@ events.append_graph_points_batch_3d.connect(qml_handler_3d_batch)
 ```
 
 ### 3. WindowManager Context Property
-**Datei:** `python/Plotter/plotter.py:39-41`
+**Datei:** `python/Studio/studio.py:39-41`
 ```python
 def set_window_manager(self, window_manager: WindowManagerBridge):
     self.__window_manager = window_manager
@@ -560,8 +560,8 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 
 ### Problem: WindowManager nicht verfügbar in QML
 **Lösung:**
-- Prüfe `plotter.py:41`: `setContextProperty("WindowManager", window_manager)`
-- Prüfe `main.py:72`: `plotter.set_window_manager(window_manager)`
+- Prüfe `studio.py:41`: `setContextProperty("WindowManager", window_manager)`
+- Prüfe `main.py:72`: `kymo.set_window_manager(window_manager)`
 - Console-Log in QML: `console.log(typeof WindowManager)`
 
 ### Problem: chartRenderer ist null

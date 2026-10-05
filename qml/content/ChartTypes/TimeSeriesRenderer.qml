@@ -232,7 +232,7 @@ Item {
         var series = chart.createSeries(ChartView.SeriesTypeLine, displayName, timeAxis, valueAxis)
         series.color = color || Qt.rgba(Math.random(), Math.random(), Math.random(), 1)
         series.width = 2
-        // GPU-drawn lines only on an OpenGL scene graph (see Plotter.prefer_opengl_scene_graph).
+        // GPU-drawn lines only on an OpenGL scene graph (see KymoStudio.prefer_opengl_scene_graph).
         series.useOpenGL = root.GraphicsInfo.api === GraphicsInfo.OpenGL
 
         _graphs[lineKey] = {

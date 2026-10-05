@@ -91,16 +91,16 @@ loadLayout(filename: str) -> bool
 
 ### Integration
 
-#### Python (main.py & plotter.py)
+#### Python (main.py & studio.py)
 Die WindowManagerBridge wurde als Context Property "WindowManager" registriert:
 
 ```python
 # main.py
 from Backend.Windows.window_manager_bridge import WindowManagerBridge
 window_manager = WindowManagerBridge()
-plotter.set_window_manager(window_manager)
+kymo.set_window_manager(window_manager)
 
-# plotter.py
+# studio.py
 def set_window_manager(self, window_manager: WindowManagerBridge):
     self.__window_manager = window_manager
     self.__context.setContextProperty("WindowManager", window_manager)
@@ -240,7 +240,7 @@ python/
 │   ├── window_manager.py          (vorhanden aus Phase 1)
 │   └── window_state.py            (vorhanden aus Phase 1)
 ├── main.py                        (erweitert)
-└── Plotter/plotter.py             (erweitert)
+└── Studio/studio.py             (erweitert)
 ```
 
 ### Status

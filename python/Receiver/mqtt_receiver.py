@@ -40,13 +40,13 @@ def normalize_payload(topic: str, payload: bytes) -> bytes:
     return json.dumps(result).encode("utf-8")
 
 
-_PLOTTER_FLOAT_RE = re.compile(
+_KYMO_FLOAT_RE = re.compile(
     rb"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$"
 )
 
 
-def _extract_plotter_payload_lines(payload: bytes) -> list[bytes]:
-    """Return payload lines that look like PlotterApp datapoints.
+def _extract_kymo_payload_lines(payload: bytes) -> list[bytes]:
+    """Return payload lines that look like KymoStudio datapoints.
 
     Supports:
     - JSON objects with `id` and (`value` or `y`)
@@ -66,7 +66,7 @@ def _extract_plotter_payload_lines(payload: bytes) -> list[bytes]:
 
     result: list[bytes] = []
     for line in candidates:
-        if _PLOTTER_FLOAT_RE.match(line):
+        if _KYMO_FLOAT_RE.match(line):
             result.append(line)
             continue
 
@@ -212,12 +212,12 @@ class MqttWorkerThread(ReceiverThread):
             self.publish([message.payload])  # The bounded ingress counts/rejects it.
             return
         try:
-            plotter_lines = _extract_plotter_payload_lines(message.payload)
+            kymo_lines = _extract_kymo_payload_lines(message.payload)
         except (ValueError, RecursionError, UnicodeError):
             self.publish([message.payload])
             return
-        if plotter_lines:
-            self.publish(plotter_lines)
+        if kymo_lines:
+            self.publish(kymo_lines)
             return
 
         self.publish([normalize_payload(message.topic, message.payload)])

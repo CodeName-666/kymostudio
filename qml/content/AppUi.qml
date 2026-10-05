@@ -21,7 +21,7 @@ ApplicationWindow {
     minimumWidth: 1024
     minimumHeight: 640
     visible: true
-    title: qsTr("Plotter · Datenanalyse")
+    title: qsTr("KymoStudio · Datenanalyse")
     color: AppTheme.surfaces.background
     font.family: AppTheme.fontFamily
     font.pixelSize: AppTheme.fontSize.medium
@@ -213,7 +213,7 @@ ApplicationWindow {
             Row {
                 spacing: 8
                 Icon { name: "logo"; size: 20; color: AppTheme.palette.primary; anchors.verticalCenter: parent.verticalCenter }
-                Label { text: "Plotter"; font.pixelSize: 14; font.weight: Font.DemiBold; anchors.verticalCenter: parent.verticalCenter }
+                Label { text: "KymoStudio"; font.pixelSize: 14; font.weight: Font.DemiBold; anchors.verticalCenter: parent.verticalCenter }
             }
             Divider {}
 
@@ -614,7 +614,7 @@ ApplicationWindow {
         color: AppTheme.surfaces.control
         border.color: AppTheme.palette.primary
         Drag.active: dragging
-        Drag.keys: ["plotter/signal"]
+        Drag.keys: ["kymo/signal"]
         Drag.hotSpot.x: 14
         Drag.hotSpot.y: 15
         onDraggingChanged: if (applicationWindow.workspaceController) applicationWindow.workspaceController.draggedSignalId = dragging ? uniqueId : ""

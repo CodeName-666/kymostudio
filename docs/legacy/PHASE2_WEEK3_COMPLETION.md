@@ -161,7 +161,7 @@ signal append_graph_points_batch_3d(var uniqueId, var points)
 ### Starting the Application
 
 ```bash
-cd d:\Projekte\Python\Plotter\PlotterApp
+cd d:\Projekte\Python\Plotter\KymoStudio
 python python/main.py
 ```
 
@@ -544,7 +544,7 @@ All acceptance criteria from ROADMAP_PHASE2_CONTINUATION.md have been met:
 
 ## 🎉 Summary
 
-Phase 2 Week 3-4 is **COMPLETE**. The PlotterApp now supports:
+Phase 2 Week 3-4 is **COMPLETE**. The KymoStudio now supports:
 
 - **2D Charts** (Phase 2 Week 1-2) ✅
 - **3D Charts** (Phase 2 Week 3-4) ✅

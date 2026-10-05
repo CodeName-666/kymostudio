@@ -1,4 +1,4 @@
-# Multi-Chart Window Design für PlotterApp
+# Multi-Chart Window Design für KymoStudio
 
 **Version 1.0** - Implementierungsplan für mehrere frei bewegliche Chart-Fenster
 

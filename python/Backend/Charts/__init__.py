@@ -1,4 +1,4 @@
-"""Chart Types Module - Polymorphic chart system for PlotterApp."""
+"""Chart Types Module - Polymorphic chart system for KymoStudio."""
 
 from .base_chart import BaseChart, ChartType
 from .xy_chart import XYLineChart, XYScatterChart

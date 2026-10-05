@@ -11,7 +11,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PYTHON_ROOT = PROJECT_ROOT / "python"
-ECU_LIBRARY_ROOT = PROJECT_ROOT.parent / "PlotterEcu" / "lib" / "PlotterLib"
+ECU_LIBRARY_ROOT = PROJECT_ROOT.parent / "KymoProbe" / "lib" / "KymoCore"
 ECU_SOURCE_ROOT = ECU_LIBRARY_ROOT / "src"
 if str(PYTHON_ROOT) not in sys.path:
     sys.path.insert(0, str(PYTHON_ROOT))
@@ -113,15 +113,15 @@ class ProtocolStreamDecoderTests(unittest.TestCase):
             self.assertEqual(decoded, frames)
 
 
-@unittest.skipUnless(ECU_SOURCE_ROOT.exists(), "Separate PlotterEcu sources were not included in the uploaded archive")
+@unittest.skipUnless(ECU_SOURCE_ROOT.exists(), "Separate KymoProbe sources were not included in the uploaded archive")
 class EmbeddedSourceContractTests(unittest.TestCase):
     def test_embedded_constants_and_golden_vectors_match_python(self) -> None:
-        header = (ECU_SOURCE_ROOT / "plotter_protocol.h").read_text(encoding="utf-8")
-        self.assertIn("#define PLOTTER_SYNC_0 0xA5u", header)
-        self.assertIn("#define PLOTTER_SYNC_1 0x5Au", header)
-        self.assertIn("#define PLOTTER_DESCRIPTOR_DATA 0x40u", header)
-        self.assertIn("#define PLOTTER_FRAME_MIN_SIZE 9u", header)
-        self.assertIn("#define PLOTTER_FRAME_MAX_SIZE 21u", header)
+        header = (ECU_SOURCE_ROOT / "kymo_protocol.h").read_text(encoding="utf-8")
+        self.assertIn("#define KYMO_SYNC_0 0xA5u", header)
+        self.assertIn("#define KYMO_SYNC_1 0x5Au", header)
+        self.assertIn("#define KYMO_DESCRIPTOR_DATA 0x40u", header)
+        self.assertIn("#define KYMO_FRAME_MIN_SIZE 9u", header)
+        self.assertIn("#define KYMO_FRAME_MAX_SIZE 21u", header)
 
         protocol_doc = (ECU_LIBRARY_ROOT / "PROTOCOL.md").read_text(encoding="utf-8")
         self.assertIn("A5 5A 40 07 00 00 80 3F 54", protocol_doc)
@@ -134,8 +134,8 @@ class EmbeddedSourceContractTests(unittest.TestCase):
         sources = "\n".join(
             path.read_text(encoding="utf-8")
             for path in (
-                ECU_SOURCE_ROOT / "plotter.cpp",
-                ECU_SOURCE_ROOT / "plotter_protocol.c",
+                ECU_SOURCE_ROOT / "kymo.cpp",
+                ECU_SOURCE_ROOT / "kymo_protocol.c",
             )
         )
         self.assertNotIn("snprintf", sources)

@@ -10,7 +10,7 @@ Technisch versierte Anwender in Embedded-Entwicklung, Mess- und Testbetrieb sowi
 
 ## Product Purpose
 
-Plotter verbindet lokale und eingebettete Datenquellen und visualisiert Messwerte als Zeitverlauf oder als echte kartesische XY-Trajektorie. Erfolg bedeutet, dass Anwender den richtigen Darstellungsmodus eindeutig wählen, Datenquellen zuverlässig steuern und Diagramme ohne unnötige UI-Verzögerung untersuchen können.
+Kymotrace verbindet lokale und eingebettete Datenquellen und visualisiert Messwerte als Zeitverlauf oder als echte kartesische XY-Trajektorie. Erfolg bedeutet, dass Anwender den richtigen Darstellungsmodus eindeutig wählen, Datenquellen zuverlässig steuern und Diagramme ohne unnötige UI-Verzögerung untersuchen können.
 
 ## Brand Personality
 
