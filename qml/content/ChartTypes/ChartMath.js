@@ -14,6 +14,17 @@ function paddedRange(low, high, fraction) {
     return [minimum, maximum]
 }
 
+/** A 1-2-5 tick step that yields roughly targetTicks intervals over span. */
+function niceStep(span, targetTicks) {
+    var target = targetTicks > 0 ? targetTicks : 5
+    if (!isFinite(span) || span <= 0) return 1
+    var raw = span / target
+    var magnitude = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10))
+    var normalized = raw / magnitude
+    var factor = normalized < 1.5 ? 1 : normalized < 3 ? 2 : normalized < 7 ? 5 : 10
+    return factor * magnitude
+}
+
 /** Zoom an axis around a point expressed as a fraction of its visible span. */
 function zoomRange(low, high, factor, anchorRatio) {
     var anchor = low + (high - low) * anchorRatio

@@ -60,6 +60,10 @@ Item {
         // X Axis
         ValueAxis {
             id: xAxis
+            // An 0 verankerte Teilstriche: die Null wird exakt beschriftet (nicht 1e-15).
+            tickType: ValueAxis.TicksDynamic
+            tickAnchor: 0
+            tickInterval: ChartMath.niceStep(max - min, 6)
             min: root.initialXMin
             max: root.initialXMax
             labelFormat: "%.4g"
@@ -76,6 +80,10 @@ Item {
         // Y Axis
         ValueAxis {
             id: yAxis
+            // An 0 verankerte Teilstriche: die Null wird exakt beschriftet (nicht 1e-15).
+            tickType: ValueAxis.TicksDynamic
+            tickAnchor: 0
+            tickInterval: ChartMath.niceStep(max - min, 5)
             min: root.initialYMin
             max: root.initialYMax
             labelFormat: "%.4g"
