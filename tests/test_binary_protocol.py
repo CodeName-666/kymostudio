@@ -131,13 +131,9 @@ class EmbeddedSourceContractTests(unittest.TestCase):
         )
 
     def test_embedded_sender_has_no_text_formatting_or_heap_allocation(self) -> None:
-        sources = "\n".join(
-            path.read_text(encoding="utf-8")
-            for path in (
-                ECU_SOURCE_ROOT / "kymo.cpp",
-                ECU_SOURCE_ROOT / "kymo_protocol.c",
-            )
-        )
+        paths = sorted(ECU_SOURCE_ROOT.glob("*.cpp"))
+        self.assertIn(ECU_SOURCE_ROOT / "kymo_protocol.cpp", paths)
+        sources = "\n".join(path.read_text(encoding="utf-8") for path in paths)
         self.assertNotIn("snprintf", sources)
         self.assertNotIn("new PrintStream", sources)
         self.assertNotIn("malloc", sources)

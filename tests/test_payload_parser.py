@@ -31,7 +31,8 @@ def test_bad_input_does_not_escape_as_a_valid_point(payload):
 
 def test_binary_vectors_and_partial_frames():
     p = PlotDataPoint(id=7, value=1.0)
-    frame = encode_data_point(p)
+    assert encode_data_point(p).hex() == 'a55a41070000803f00'  # default: NO_CRC descriptor
+    frame = encode_data_point(p, crc_enabled=True)
     assert frame.hex() == 'a55a40070000803f54'
     assert parse_payload(frame) == p
     decoder = ProtocolStreamDecoder()
@@ -40,12 +41,12 @@ def test_binary_vectors_and_partial_frames():
 
 def test_xyz_binary_golden_vector():
     p = PlotDataPoint(id=3, x=1.25, value=-2.5, z_value=9., timestamp=1.234)
-    frame = encode_data_point(p)
+    frame = encode_data_point(p, crc_enabled=True)
     assert frame.hex() == 'a55a4e030000a03f000020c000001041d204000089'
     assert decode_data_frame(frame) == p
 
 def test_corrupt_frame_rejected():
-    frame = bytearray(encode_data_point(PlotDataPoint(id=1, value=1.)))
+    frame = bytearray(encode_data_point(PlotDataPoint(id=1, value=1.), crc_enabled=True))
     frame[-1] ^= 1
     with pytest.raises(ProtocolError):
         parse_payload(bytes(frame))
