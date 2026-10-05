@@ -6,7 +6,8 @@ import os
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# In a PyInstaller bundle all resources (qml, config, resources) live in sys._MEIPASS.
+PROJECT_ROOT = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parents[2]))
 
 
 LEGACY_DIR_NAME = 'PlotterApp'  # name before the Kymotrace rename

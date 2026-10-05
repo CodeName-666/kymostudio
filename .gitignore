@@ -57,3 +57,6 @@ __pycache__/
 .coverage
 htmlcov/
 .superpowers/
+
+# Build artefacts (PyInstaller, Inno Setup)
+/build/
