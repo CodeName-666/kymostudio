@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="t">
+  <title id="t">Kymotrace – Sechseck-Pegel (Pegelanzeige)</title>
+  <!-- Sechseck: Bauteil / Schraubenmutter -->
+  <path d="M32 4L56 18V46L32 60L8 46V18Z" fill="#0E1A2B" stroke="#2DD4BF" stroke-width="3" stroke-linejoin="round"/>
+  <!-- Pegelmuster: Messwerte, zum aktuellen Wert hin kräftiger -->
+  <g>
+    <rect x="14.5" y="34.0" width="4.6" height="12" rx="2.3" fill="#2DD4BF" fill-opacity="0.45"/>
+    <rect x="22" y="22.0" width="4.6" height="24" rx="2.3" fill="#2DD4BF" fill-opacity="0.65"/>
+    <rect x="29.5" y="12.0" width="4.6" height="34" rx="2.3" fill="#2DD4BF" fill-opacity="0.85"/>
+    <rect x="37" y="26.0" width="4.6" height="20" rx="2.3" fill="#2DD4BF" fill-opacity="1.0"/>
+  </g>
+  <!-- aktueller Live-Messwert -->
+  <circle cx="47" cy="41.8" r="4.2" fill="#FFB020"/>
+</svg>
