@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="t">
+  <title id="t">Kymotrace</title>
+  <!-- Grundfläche: das Messinstrument -->
+  <rect width="64" height="64" rx="14" fill="#0E1A2B"/>
+  <!-- K-Stamm und oberer Arm: Trommelachse und Schreibarm -->
+  <g fill="none" stroke="#E8EEF5" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 15V49"/>
+    <path d="M24 32L42 15"/>
+  </g>
+  <!-- Unterer Arm: die aufgezeichnete Messkurve -->
+  <path d="M24 32C29 36 30 45 35 45C40 45 39 35 44 35C48.5 35 48.5 44 50.5 47" fill="none" stroke="#2DD4BF" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Schreibspitze: der aktuelle Live-Messpunkt -->
+  <circle cx="50.5" cy="47" r="4" fill="#FFB020"/>
+</svg>
