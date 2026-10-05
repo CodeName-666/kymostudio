@@ -9,6 +9,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from PySide6.QtCore import QEvent, QCoreApplication, QMetaObject, QSettings, QTimer, Qt, qInstallMessageHandler
+from PySide6.QtGui import QIcon
 from PySide6.QtQuickControls2 import QQuickStyle
 from PySide6.QtWidgets import QApplication, QMessageBox
 
@@ -30,7 +31,12 @@ def main(argv: list[str] | None = None) -> int:
     QCoreApplication.setApplicationName('KymoStudio')
     QCoreApplication.setApplicationVersion('2.0.0-modernized')
     QQuickStyle.setStyle('Fusion')
+    if sys.platform == 'win32':
+        # Eigene App-ID, damit die Taskleiste das Kymotrace-Icon statt des Python-Icons zeigt.
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('Kymotrace.KymoStudio')
     app = QApplication.instance() or QApplication([sys.argv[0]])
+    app.setWindowIcon(QIcon(str(PROJECT_ROOT / 'resources/icons/kymotrace.ico')))
     temporary = TemporaryDirectory(prefix='kymo-smoke-') if options.smoke_test else None
     config_path = Path(temporary.name) / 'config.json' if temporary else (options.config or user_config_path())
     if temporary:

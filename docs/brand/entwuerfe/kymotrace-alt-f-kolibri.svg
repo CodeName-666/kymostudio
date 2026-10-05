@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="t">
+  <title id="t">Kymotrace – Kolibri</title>
+  <!-- Flugspur: die Messkurve, die der Kolibri hinter sich herzieht -->
+  <path d="M4 50C9 50 10 43 14 43S19 52 23 52S28 46 31 44" fill="none" stroke="#2DD4BF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Flügel (Schwingung) -->
+  <path d="M33 30L20 9L41 25Z" fill="#7DD3FC"/>
+  <path d="M35 28L30 6L44 24Z" fill="#38BDF8"/>
+  <!-- Körper mit Schwanz -->
+  <path d="M44 22C37 22 31 30 28 40L24 47L33 43C38 39 44 33 46 27Z" fill="#0E8C7E"/>
+  <!-- Kopf -->
+  <circle cx="45" cy="23" r="6" fill="#0E8C7E"/>
+  <circle cx="46.5" cy="21.5" r="1.4" fill="#0E1A2B"/>
+  <!-- Schnabel = Schreibstift -->
+  <path d="M50 24L60 31" stroke="#64748B" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="60" cy="31" r="3" fill="#FFB020"/>
+</svg>

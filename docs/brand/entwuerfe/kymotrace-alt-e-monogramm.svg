@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="t">
+  <title id="t">Kymotrace – Monogramm KT</title>
+  <!-- Sechseck: Bauteil / Schraubenmutter -->
+  <path d="M32 4L56 18V46L32 60L8 46V18Z" fill="#0E1A2B" stroke="#2DD4BF" stroke-width="3" stroke-linejoin="round"/>
+  <g fill="none" stroke="#E8EEF5" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- T: Querbalken über den gemeinsamen Stamm -->
+    <path d="M16 19H36"/>
+    <path d="M26 19V47"/>
+    <!-- K: Arme gehen rechts vom Stamm ab -->
+    <path d="M28 34L47 19"/>
+    <path d="M29 34L45 47"/>
+  </g>
+  <circle cx="46" cy="47" r="3.6" fill="#FFB020"/>
+</svg>
