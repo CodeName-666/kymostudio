@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """Real queue behavior, including concurrent producers and memory limits."""
 from concurrent.futures import ThreadPoolExecutor
 from Core.ingress import IngressQueue

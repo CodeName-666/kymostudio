@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 # This Python file uses the following encoding: utf-8
 import json
 import math

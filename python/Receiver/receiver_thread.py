@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """Cooperative worker contract with interruptible reconnect backoff."""
 from threading import Event
 from typing import Optional

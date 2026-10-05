@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """CSV disk work runs off the GUI thread over an immutable sample snapshot."""
 from __future__ import annotations
 from pathlib import Path

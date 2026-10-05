@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+// Copyright (c) 2026 Christof Seidel
 /** Lightweight JS syntax check, NOT a QML compiler or Qt runtime substitute.
  * No third-party npm dependencies. Parses .js files (without QML pragmas) and
  * function bodies embedded in QML. Bindings/types/layout still require Qt.

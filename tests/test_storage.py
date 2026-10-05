@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """Raw retention and display back-pressure are independent and bounded."""
 import csv
 import math

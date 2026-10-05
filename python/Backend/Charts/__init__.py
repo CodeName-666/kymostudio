@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """Chart Types Module - Polymorphic chart system for KymoStudio."""
 
 from .base_chart import BaseChart, ChartType

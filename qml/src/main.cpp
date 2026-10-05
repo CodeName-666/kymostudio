@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+// Copyright (c) 2026 Christof Seidel
 /****************************************************************************
 **
 ** Copyright (C) 2021 The Qt Company Ltd.

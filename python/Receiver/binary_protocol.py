@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """Compact Kymotrace Binary Protocol v6 codec and stream framing.
 
 The module is the protocol seam shared by transport adapters and the backend.
