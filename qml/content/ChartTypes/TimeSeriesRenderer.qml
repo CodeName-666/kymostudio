@@ -79,9 +79,13 @@ Item {
         // Time Axis (X)
         ValueAxis {
             id: timeAxis
+            // An 0 verankerte Teilstriche: die Null wird exakt beschriftet (nicht 1e-15).
+            tickType: ValueAxis.TicksDynamic
+            tickAnchor: 0
+            tickInterval: ChartMath.niceStep(max - min, 6)
             min: 0
             max: root.timeWindow
-            labelFormat: "%.1f s"
+            labelFormat: "%.4g s"
             labelsFont.pixelSize: 11; labelsFont.family: AppTheme.monoFamily
             labelsColor: AppTheme.text.secondary
             gridVisible: AppTheme.showGrid
@@ -95,6 +99,10 @@ Item {
         // Value Axis (Y)
         ValueAxis {
             id: valueAxis
+            // An 0 verankerte Teilstriche: die Null wird exakt beschriftet (nicht 1e-15).
+            tickType: ValueAxis.TicksDynamic
+            tickAnchor: 0
+            tickInterval: ChartMath.niceStep(max - min, 5)
             min: root.initialYMin
             max: root.initialYMax
             labelFormat: "%.4g"
