@@ -1,7 +1,7 @@
 # Performance Optimizations - Level 1 Implementation
 
 ## Overview
-This document describes the Level 1 performance optimizations implemented to support higher data frequencies in the Plotter application.
+This document describes the Level 1 performance optimizations implemented to support higher data frequencies in the Kymotrace application.
 
 ## Implemented Optimizations
 

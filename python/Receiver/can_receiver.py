@@ -17,7 +17,7 @@ from .binary_protocol import decode_data_frame, is_binary_frame
 
 
 def decode_can_value(data: bytes, value_format: str = "auto") -> float:
-    """Decode CAN payload bytes into the numeric value expected by the plotter."""
+    """Decode CAN payload bytes into the numeric value expected by Kymotrace."""
     payload = bytes(data)
     if not payload:
         raise ValueError("CAN payload is empty")
@@ -58,7 +58,7 @@ def decode_can_value(data: bytes, value_format: str = "auto") -> float:
     raise ValueError(f"Unsupported CAN value format: {value_format}")
 
 
-def can_message_to_plotter_payload(
+def can_message_to_kymo_payload(
     message: can.Message, settings: Optional[Dict[str, Any]] = None
 ) -> bytes:
     """Normalize a python-can message to the backend's JSON wire format."""
@@ -115,7 +115,7 @@ class CanWorkerThread(ReceiverThread):
                 continue
 
             try:
-                payload = can_message_to_plotter_payload(message, self._settings)
+                payload = can_message_to_kymo_payload(message, self._settings)
             except (TypeError, ValueError, struct.error) as exc:
                 logger.log_warning(f"Ignoring invalid CAN frame {message.arbitration_id:#x}: {exc}")
                 continue
@@ -244,6 +244,6 @@ class CanReceiver(Receiver):
 __all__ = [
     "CanReceiver",
     "CanWorkerThread",
-    "can_message_to_plotter_payload",
+    "can_message_to_kymo_payload",
     "decode_can_value",
 ]

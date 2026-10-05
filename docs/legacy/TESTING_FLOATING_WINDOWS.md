@@ -6,7 +6,7 @@
 
 1. **Anwendung starten**
    ```bash
-   cd d:\Projekte\Python\Plotter\PlotterApp
+   cd d:\Projekte\Python\Plotter\KymoStudio
    python python/main.py
    ```
 
@@ -113,7 +113,7 @@ Bei erfolgreicher Erstellung eines Test-Fensters:
 
 #### Problem: Fenster wird nicht erstellt
 **Lösung**: Prüfe Konsole auf Fehler:
-- "WindowManager" nicht gefunden → plotter.py Integration prüfen
+- "WindowManager" nicht gefunden → studio.py Integration prüfen
 - Component.Error → QML-Pfad prüfen
 
 #### Problem: Chart bleibt leer
@@ -149,7 +149,7 @@ Nach erfolgreichem Test von Phase 2, Woche 2:
 ✅ qml/content/ChartTypes/XYChartRenderer.qml             (461 Zeilen)
 ✅ python/Backend/Windows/window_manager_bridge.py        (228 Zeilen)
 ✅ python/main.py                                         (erweitert)
-✅ python/Plotter/plotter.py                              (erweitert)
+✅ python/Studio/studio.py                              (erweitert)
 ✅ qml/content/App.qml                                    (erweitert)
 ✅ qml/content/ChartWindow/ChartWindow.qml                (erweitert)
 ```

@@ -46,7 +46,7 @@
       "type": "CAN",
       "default": {
         "interface": "virtual",
-        "channel": "plotter",
+        "channel": "kymo",
         "bitrate": 500000,
         "value_format": "auto",
         "scale": 1.0,
@@ -66,7 +66,7 @@
   "logging": {
     "enabled": true,
     "console_log": false,
-    "name": "plotter.log",
+    "name": "kymostudio.log",
     "level": "INFO"
   },
   "performance": {

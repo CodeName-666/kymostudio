@@ -1,4 +1,4 @@
-# PlotterApp: Modernisierung
+# KymoStudio: Modernisierung
 
 ## Ziel und Rahmen
 Die hochgeladene Desktop-Anwendung soll Messdaten weiterhin über Serial, TCP/Telnet, MQTT, CAN und synthetische Quellen empfangen und als Zeitreihe, XY-Linie, XY-Streuung oder XYZ darstellen. PySide6/QML und die vorhandenen öffentlichen Backend-Slots bleiben erhalten. Keine Umstellung auf eine Web-App.

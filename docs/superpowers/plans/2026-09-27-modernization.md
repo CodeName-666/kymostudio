@@ -1,4 +1,4 @@
-# PlotterApp Modernization Implementation Plan
+# KymoStudio Modernization Implementation Plan
 
 **Goal:** Bedienung, Datenintegrität, Speichergrenzen und Wartbarkeit der bestehenden Desktop-App verbessern.
 **Architecture:** Qt-unabhängiger Kern, kompatible QObject-Fassade, kleinere QML-Arbeitsbereichskomponenten.

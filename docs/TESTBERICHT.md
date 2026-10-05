@@ -19,7 +19,7 @@ Es wurden keine Qt-Ersatzmodule als vermeintlicher Laufzeitnachweis benutzt.
 | `python tools/benchmark_core.py` | 300.000 Werte / 32 Signale; 250.000 Rohwerte behalten, 50.000 alte entfernt | Rohspeicher und Frame-Puffer; keine reale Datenschnittstelle, keine FPS-Messung. |
 
 Die **acht übersprungenen Einträge** bestehen aus fünf Qt-abhängigen Testmodulen und
-drei Tests gegen die nicht mitgelieferte separate `PlotterEcu`-Bibliothek.
+drei Tests gegen die nicht mitgelieferte separate `KymoProbe`-Bibliothek.
 Die fünf Module enthalten mehrere Testfälle; „acht“ darf nicht als Zahl aller
 ungeprüften Qt-Funktionen missverstanden werden.
 

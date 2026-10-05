@@ -8,7 +8,7 @@ handling identical for Serial, Telnet, MQTT, CAN, and synthetic test data.
 
 `new_data: Signal(bytes)` emits exactly one complete message:
 
-- one Plotter Compact Binary Protocol v6 frame, or
+- one Kymotrace Compact Binary Protocol v6 frame, or
 - one complete legacy JSON/plain-number message.
 
 Byte-stream adapters must pass received chunks through
@@ -41,9 +41,9 @@ application-level command format.
    emit only its complete messages.
 4. Pass binary v6 frames unchanged.
 5. Transport-native formats such as Classic CAN may normalize values into an
-   accepted Plotter payload.
+   accepted Kymotrace payload.
 6. Stop promptly when `stop_event` is emitted and keep connection state in
    sync.
 
 The canonical wire contract is
-`../../PlotterEcu/lib/PlotterLib/PROTOCOL.md`.
+`../../KymoProbe/lib/KymoCore/PROTOCOL.md`.

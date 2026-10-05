@@ -1,4 +1,4 @@
-"""PlotterApp entry point, independent of the current working directory."""
+"""KymoStudio entry point, independent of the current working directory."""
 from __future__ import annotations
 
 import argparse
@@ -17,21 +17,21 @@ from Backend.Windows.window_manager_bridge import WindowManagerBridge
 from Core.configuration import ConfigurationRepository
 from Core.paths import PROJECT_ROOT, user_config_path, user_data_dir
 from Logger.logger import Logger
-from Plotter.plotter import Plotter
+from Studio.studio import KymoStudio
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description='PlotterApp — live measurement workbench')
+    parser = argparse.ArgumentParser(description='KymoStudio — live measurement workbench')
     parser.add_argument('--config', type=Path, help='Explicit writable user configuration')
     parser.add_argument('--demo', action='store_true', help='Open a synthetic three-signal example')
     parser.add_argument('--smoke-test', action='store_true', help='Isolated Qt/QML launch + acquisition check')
     options = parser.parse_args(argv)
-    QCoreApplication.setOrganizationName('PlotterApp')
-    QCoreApplication.setApplicationName('PlotterApp')
+    QCoreApplication.setOrganizationName('KymoStudio')
+    QCoreApplication.setApplicationName('KymoStudio')
     QCoreApplication.setApplicationVersion('2.0.0-modernized')
     QQuickStyle.setStyle('Fusion')
     app = QApplication.instance() or QApplication([sys.argv[0]])
-    temporary = TemporaryDirectory(prefix='plotter-smoke-') if options.smoke_test else None
+    temporary = TemporaryDirectory(prefix='kymo-smoke-') if options.smoke_test else None
     config_path = Path(temporary.name) / 'config.json' if temporary else (options.config or user_config_path())
     if temporary:
         QSettings.setDefaultFormat(QSettings.IniFormat)
@@ -44,19 +44,19 @@ def main(argv: list[str] | None = None) -> int:
         message = f'Konfiguration nicht geladen: {config_path}\n\n{exc}\n\nDie Datei wurde nicht verändert.'
         print(message, file=sys.stderr)
         if not options.smoke_test:
-            QMessageBox.critical(None, 'PlotterApp — Konfigurationsfehler', message)
+            QMessageBox.critical(None, 'KymoStudio — Konfigurationsfehler', message)
         if temporary:
             temporary.cleanup()
         return 2
     log_dir = Path(temporary.name) if temporary else user_data_dir()
     log_config = dict(config.get('logging', {}))
-    log_config['name'] = str(log_dir / 'logs' / 'plotter.log')
+    log_config['name'] = str(log_dir / 'logs' / 'kymostudio.log')
     Logger.get_instance().config(log_config)
-    plotter = Plotter([sys.argv[0]], config)
+    studio = KymoStudio([sys.argv[0]], config)
     backend = Backend(config_path)
     backend.config(config)
-    plotter.set_backend(backend)
-    plotter.set_window_manager(WindowManagerBridge())
+    studio.set_backend(backend)
+    studio.set_window_manager(WindowManagerBridge())
     errors: list[str] = []
     previous_handler = None
     if options.smoke_test:
@@ -66,10 +66,10 @@ def main(argv: list[str] | None = None) -> int:
                 'Cannot read property', 'is not a function', 'Binding loop', 'Unable to assign', 'failed to load')):
                 errors.append(message)
         previous_handler = qInstallMessageHandler(capture)
-    plotter.load_app()
-    if not plotter.rootObjects():
+    studio.load_app()
+    if not studio.rootObjects():
         backend.shutdown()
-        plotter.engine.deleteLater()
+        studio.engine.deleteLater()
         QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
         if options.smoke_test:
             qInstallMessageHandler(previous_handler)
@@ -77,7 +77,7 @@ def main(argv: list[str] | None = None) -> int:
             logging.shutdown()
             temporary.cleanup()
         return 3
-    root = plotter.rootObjects()[0]
+    root = studio.rootObjects()[0]
     if options.demo or options.smoke_test:
         QTimer.singleShot(100, lambda: QMetaObject.invokeMethod(root, 'startDemo', Qt.QueuedConnection))
     if options.smoke_test:
@@ -90,9 +90,9 @@ def main(argv: list[str] | None = None) -> int:
                 okay = False
             app.exit(0 if okay else 4)
         QTimer.singleShot(1600, finish_smoke)
-    result = plotter.run()
+    result = studio.run()
     backend.shutdown()
-    plotter.engine.deleteLater()
+    studio.engine.deleteLater()
     QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
     if options.smoke_test:
         qInstallMessageHandler(previous_handler)

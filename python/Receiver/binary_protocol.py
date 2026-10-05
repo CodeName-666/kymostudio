@@ -1,4 +1,4 @@
-"""Compact Plotter Binary Protocol v6 codec and stream framing.
+"""Compact Kymotrace Binary Protocol v6 codec and stream framing.
 
 The module is the protocol seam shared by transport adapters and the backend.
 It deliberately exposes only point encoding/decoding and incremental framing;
@@ -16,7 +16,7 @@ from .message import PlotDataPoint
 
 SYNC: Final = b"\xA5\x5A"
 WIRE_VERSION: Final = 1
-PROTOCOL_VERSION: Final = "6.0"
+PROTOCOL_VERSION: Final = "6.1"
 
 _VERSION_SHIFT: Final = 6
 _VERSION_MASK: Final = 0xC0
@@ -25,7 +25,7 @@ _TYPE_DATA: Final = 0x00
 _FLAG_X: Final = 0x08
 _FLAG_Z: Final = 0x04
 _FLAG_TIMESTAMP: Final = 0x02
-_RESERVED_MASK: Final = 0x01
+_FLAG_NO_CRC: Final = 0x01
 _BASE_DESCRIPTOR: Final = WIRE_VERSION << _VERSION_SHIFT
 _MIN_FRAME_SIZE: Final = 9
 _MAX_FRAME_SIZE: Final = 21
@@ -55,9 +55,11 @@ def crc8(data: bytes) -> int:
     return checksum
 
 
-def encode_data_point(point: PlotDataPoint) -> bytes:
-    """Encode one point into a 9–21 byte little-endian binary frame."""
+def encode_data_point(point: PlotDataPoint, *, crc_enabled: bool = False) -> bytes:
+    """Encode 9–21 bytes; CRC is opt-in, otherwise emit NO_CRC and a zero trailer."""
     descriptor = _BASE_DESCRIPTOR | _TYPE_DATA
+    if not crc_enabled:
+        descriptor |= _FLAG_NO_CRC
     fields: list[bytes] = []
 
     if point.x is not None:
@@ -81,7 +83,7 @@ def encode_data_point(point: PlotDataPoint) -> bytes:
         fields.append(struct.pack("<I", timestamp_ms))
 
     body = bytes((descriptor, point.id)) + b"".join(fields)
-    return SYNC + body + bytes((crc8(body),))
+    return SYNC + body + bytes((crc8(body) if crc_enabled else 0,))
 
 
 def decode_data_frame(frame: bytes) -> PlotDataPoint:
@@ -100,7 +102,7 @@ def decode_data_frame(frame: bytes) -> PlotDataPoint:
         raise ProtocolError(
             f"binary frame length mismatch: expected {expected_length}, got {len(raw)}"
         )
-    if crc8(raw[2:-1]) != raw[-1]:
+    if not raw[2] & _FLAG_NO_CRC and crc8(raw[2:-1]) != raw[-1]:
         raise ProtocolError("binary frame CRC mismatch")
 
     fields = unpacker.unpack_from(raw, 4)
@@ -135,8 +137,6 @@ def frame_length_from_descriptor(descriptor: int) -> int:
         raise ProtocolError(f"unsupported binary wire version: {version}")
     if descriptor & _TYPE_MASK != _TYPE_DATA:
         raise ProtocolError("unsupported binary message type")
-    if descriptor & _RESERVED_MASK:
-        raise ProtocolError("reserved descriptor bit must be zero")
 
     optional_fields = int(bool(descriptor & _FLAG_X))
     optional_fields += int(bool(descriptor & _FLAG_Z))
@@ -197,12 +197,13 @@ class ProtocolStreamDecoder:
                     continue
                 if size - pos < frame_length:
                     break
-                checksum = 0
-                for byte in buffer[pos + 2:pos + frame_length - 1]:
-                    checksum = table[checksum ^ byte]
-                if checksum != buffer[pos + frame_length - 1]:
-                    pos += 1
-                    continue
+                if not buffer[pos + 2] & _FLAG_NO_CRC:
+                    checksum = 0
+                    for byte in buffer[pos + 2:pos + frame_length - 1]:
+                        checksum = table[checksum ^ byte]
+                    if checksum != buffer[pos + frame_length - 1]:
+                        pos += 1
+                        continue
                 # Field validation (finite values) happens in decode_data_frame.
                 messages.append(bytes(buffer[pos:pos + frame_length]))
                 pos += frame_length

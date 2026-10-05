@@ -1,4 +1,4 @@
-# PlotterApp · überarbeitete Desktop-Arbeitsfläche
+# KymoStudio · überarbeitete Desktop-Arbeitsfläche
 
 **Quellcode-Ausgabe vom 27.09.2026 · PySide6 / Qt Quick (QML).**
 Diese Version basiert auf dem hochgeladenen Projekt. Datenkern, aktive Arbeitsfläche,
@@ -108,11 +108,15 @@ bei mehreren problematischen Verbindungen kann sich diese Zeit summieren.
 `config/config.json` ist die mitgelieferte **Vorlage**, nicht mehr der normale
 Speicherort für laufende Benutzereinstellungen. Standardorte:
 
-- Windows: `%APPDATA%\PlotterApp\config.json`
-- Linux: `${XDG_CONFIG_HOME:-~/.config}/PlotterApp/config.json`
-- macOS: `~/Library/Application Support/PlotterApp/config.json`
+- Windows: `%APPDATA%\KymoStudio\config.json`
+- Linux: `${XDG_CONFIG_HOME:-~/.config}/KymoStudio/config.json`
+- macOS: `~/Library/Application Support/KymoStudio/config.json`
 
-`PLOTTER_CONFIG_HOME` überschreibt das Benutzerdatenverzeichnis. Mit
+Ein vorhandenes Verzeichnis `PlotterApp` aus der Zeit vor der Umbenennung wird
+beim ersten Start einmalig nach `KymoStudio` verschoben.
+
+`KYMO_CONFIG_HOME` überschreibt das Benutzerdatenverzeichnis; der alte Name
+`PLOTTER_CONFIG_HOME` wird weiterhin gelesen. Mit
 `python run.py --config PFAD/config.json` lässt sich eine explizite schreibbare
 Konfiguration wählen. Eine vorhandene Datei wird vor der Nutzung validiert.
 Geometrie und einfache Darstellungspräferenzen liegen zusätzlich in Qt `Settings`.
@@ -129,7 +133,7 @@ Gespeichert werden Diagrammdefinitionen, Zuordnungen, Namen, Farben, Sichtbarkei
 
 JSON kann MQTT-Zugangsdaten im Klartext enthalten. Konfigurationen und Protokolle nicht
 ungeprüft veröffentlichen. Es wurde kein Betriebssystem-Schlüsselspeicher ergänzt.
-Das Log rotiert im Benutzerdatenverzeichnis unter `logs/plotter.log`.
+Das Log rotiert im Benutzerdatenverzeichnis unter `logs/kymostudio.log`.
 
 ## Prüfungen auf dem Zielrechner
 
@@ -155,7 +159,7 @@ python tools/benchmark_core.py
 
 Ein GitHub-Actions-Workflow ist enthalten, wurde in dieser Bearbeitung aber nicht auf
 GitHub ausgeführt. Drei Tests benötigen das separate, nicht mitgelieferte
-`PlotterEcu`-Projekt; ohne dieses werden sie nachvollziehbar übersprungen.
+`KymoProbe`-Projekt; ohne dieses werden sie nachvollziehbar übersprungen.
 
 ## Projektunterlagen
 

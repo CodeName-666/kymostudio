@@ -1,4 +1,4 @@
-# PlotterApp - Floating Multi-Chart-Type System
+# KymoStudio - Floating Multi-Chart-Type System
 
 **Version 2.0 COMPLETE REDESIGN**
 Vollständige Umstellung auf Floating Windows mit Multi-Chart-Type Support
@@ -34,7 +34,7 @@ Vollständige Umstellung auf Floating Windows mit Multi-Chart-Type Support
 ### Konzeptionelles Design:
 
 ```
-PlotterApp (Root)
+KymoStudio (Root)
 │
 ├── FloatingChartManager (NEU)
 │   ├── ChartRegistry (verwaltet alle Charts)
@@ -131,7 +131,7 @@ class BaseChart(ABC):
 # python/Backend/Charts/xy_chart.py
 
 class XYLineChart(BaseChart):
-    """2D Line Chart (standard PlotterApp chart)"""
+    """2D Line Chart (standard KymoStudio chart)"""
 
     def __init__(self, chart_id: str, name: str):
         super().__init__(chart_id, name, ChartType.XY_LINE)
@@ -312,7 +312,7 @@ class PlotDataPoint:
 ### Embedded Protocol Extension:
 
 ```cpp
-// ../PlotterEcu/lib/PlotterLib/src/plotter.h
+// ../KymoProbe/lib/KymoCore/src/kymo.h
 
 // Neue send() Methode für 3D Daten
 void send(uint8_t channelId, float yValue, float zValue, uint32_t currentTimeMs);
@@ -370,7 +370,7 @@ def _parse_data_point(self, interface: str, payload: bytes) -> PlotDataPoint | N
 - [ ] `PlotDataPoint` um `z_value` erweitern
 - [ ] Parser für 3D-Daten
 - [ ] Validierung nach Dimensions
-- [ ] Embedded Protocol updaten (`plotter.h`)
+- [ ] Embedded Protocol updaten (`kymo.h`)
 
 #### Woche 2: QML Floating Window System
 
@@ -608,7 +608,7 @@ def _parse_data_point(self, interface: str, payload: bytes) -> PlotDataPoint | N
 ## 📁 Neue Dateistruktur
 
 ```
-PlotterApp/
+KymoStudio/
 │
 ├── python/
 │   ├── Backend/
@@ -665,9 +665,9 @@ PlotterApp/
 │
 ├── embedded/
 │   └── common/
-│       ├── plotter.h                       # UPDATE: 3D send() methods
-│       ├── plotter.cpp                     # UPDATE: 3D formatting
-│       └── plotter_protocol.h              # UPDATE: Z coordinate
+│       ├── kymo.h                       # UPDATE: 3D send() methods
+│       ├── kymo.cpp                     # UPDATE: 3D formatting
+│       └── kymo_protocol.h              # UPDATE: Z coordinate
 │
 └── plugins/                                # NEU: Plugin directory
     ├── heatmap/

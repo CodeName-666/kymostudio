@@ -79,9 +79,9 @@ QString resolveControlsStyle()
 
 int main(int argc, char *argv[])
 {
-    QCoreApplication::setOrganizationName(QStringLiteral("PlotterApp"));
-    QCoreApplication::setOrganizationDomain(QStringLiteral("plotter.app"));
-    QCoreApplication::setApplicationName(QStringLiteral("PlotterApp"));
+    QCoreApplication::setOrganizationName(QStringLiteral("KymoStudio"));
+    QCoreApplication::setOrganizationDomain(QStringLiteral("kymotrace.com"));
+    QCoreApplication::setApplicationName(QStringLiteral("KymoStudio"));
 
     set_qt_environment();
 

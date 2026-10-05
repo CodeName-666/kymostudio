@@ -9,7 +9,7 @@ QtObject {
     readonly property int width: 1280
     readonly property int height: 720
 
-    readonly property string title: "PlotterApp"
+    readonly property string title: "KymoStudio"
 
 
     /* Edit this comment to add your custom font */

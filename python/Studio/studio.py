@@ -43,7 +43,7 @@ def prefer_opengl_scene_graph() -> bool:
     return True
 
 
-class Plotter(QObject):
+class KymoStudio(QObject):
     def __init__(self, args: list[str], config: dict) -> None:
         app = QApplication.instance() or QApplication(args)
         super().__init__()

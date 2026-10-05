@@ -55,7 +55,7 @@ Project {
     importPaths: [ ".", "imports", "imports/Backend","content"]
 
     /* Required for deployment */
-    targetDirectory: "../build/Plotter"
+    targetDirectory: "../build/Kymo"
 	
 	qdsVersion: "3.9"
 
