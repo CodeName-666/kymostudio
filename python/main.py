@@ -19,6 +19,7 @@ from Backend.backend import Backend
 from Backend.Windows.window_manager_bridge import WindowManagerBridge
 from Core.configuration import ConfigurationRepository
 from Core.paths import PROJECT_ROOT, user_config_path, user_data_dir
+from Core.version import __version__
 from Logger.logger import Logger
 from Studio.studio import KymoStudio
 
@@ -31,7 +32,7 @@ def main(argv: list[str] | None = None) -> int:
     options = parser.parse_args(argv)
     QCoreApplication.setOrganizationName('KymoStudio')
     QCoreApplication.setApplicationName('KymoStudio')
-    QCoreApplication.setApplicationVersion('2.0.0-modernized')
+    QCoreApplication.setApplicationVersion(__version__)
     QQuickStyle.setStyle('Fusion')
     if sys.platform == 'win32':
         # Eigene App-ID, damit die Taskleiste das Kymotrace-Icon statt des Python-Icons zeigt.
@@ -89,8 +90,12 @@ def main(argv: list[str] | None = None) -> int:
     if options.demo or options.smoke_test:
         QTimer.singleShot(100, lambda: QMetaObject.invokeMethod(root, 'startDemo', Qt.QueuedConnection))
     if options.smoke_test:
-        def finish_smoke():
+        def finish_smoke(remaining_ms: int = 10000):
             data = backend.get_diagnostics()
+            # Cold starts (e.g. the bundled exe) take longer: wait up to 10 s for data.
+            if data['received'] < 3 and not errors and remaining_ms > 0:
+                QTimer.singleShot(250, lambda: finish_smoke(remaining_ms - 250))
+                return
             okay = data['received'] >= 3 and not errors
             print(json.dumps({'qt_smoke': 'passed' if okay else 'failed', 'diagnostics': data,
                               'qml_errors': errors}, indent=2))

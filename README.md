@@ -96,7 +96,11 @@ or JSON can be displayed directly.
 
 ## Try it quickly
 
-With Python 3.12. The demo needs no hardware:
+**Windows:** download `KymoStudio_<version>_Setup.exe` from the
+[latest release](https://github.com/CodeName-666/kymostudio/releases/latest),
+install it and start KymoStudio. The demo is in the menu, no hardware needed.
+
+**From source** with Python 3.12. The demo needs no hardware:
 
 ```bash
 python -m venv .venv
