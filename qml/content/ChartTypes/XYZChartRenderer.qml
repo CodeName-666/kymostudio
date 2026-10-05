@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+// Copyright (c) 2026 Christof Seidel
 import QtQuick 6.4
 import QtQuick.Controls 6.4
 import QtQuick3D 6.4

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """Receiver registry and factory helpers.
 
 The registry is responsible for mapping interface identifiers from the project

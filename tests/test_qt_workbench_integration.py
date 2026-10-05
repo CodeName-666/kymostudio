@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """Exercise real Qt APIs; these checks must not use mocked PySide modules."""
 import os
 import subprocess

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+// Copyright (c) 2026 Christof Seidel
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');

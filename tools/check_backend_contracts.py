@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """Check direct QML Backend calls against the Python API; not a Qt metaobject test."""
 import ast
 import re

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """MQTT receiver implementation built on top of paho-mqtt."""
 
 from __future__ import annotations

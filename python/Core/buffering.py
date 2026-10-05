@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """Bounded display queues and order-preserving min/max envelope reduction."""
 from __future__ import annotations
 

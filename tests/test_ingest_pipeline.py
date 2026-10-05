@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """Worker-side parsing, batched hand-off and the single-replace chart bridge."""
 import pytest
 pytest.importorskip("PySide6", reason="Real Qt integration requires requirements-dev.txt")

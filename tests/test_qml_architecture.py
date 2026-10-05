@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """Static source-contract checks; not a Qt/QML runtime test."""
 import unittest
 from pathlib import Path

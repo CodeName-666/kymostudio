@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """Erzeugt das Kymotrace-Logo-Set (Signal-Ring): SVGs, Favicon, Windows-Icon, Übersicht.
 
 Aufruf: .venv/Scripts/python.exe tools/build_brand.py

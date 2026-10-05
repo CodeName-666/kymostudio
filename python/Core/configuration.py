@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """Atomic JSON persistence, structural validation and local-file URL handling."""
 from __future__ import annotations
 

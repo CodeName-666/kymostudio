@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """XYZ Chart - 3D Scatter and Surface chart implementations."""
 
 from typing import Dict, Any
