@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """Bounded thread-safe handoff; no Qt event or widget access in producers.
 
 Items are opaque (raw payloads or already parsed samples); ``size`` is the

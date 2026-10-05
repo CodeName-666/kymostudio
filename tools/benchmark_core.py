@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """Deterministic retention stress check; NOT a GUI/FPS or transport benchmark."""
 from __future__ import annotations
 import json

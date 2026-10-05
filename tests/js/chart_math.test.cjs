@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+// Copyright (c) 2026 Christof Seidel
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
@@ -18,4 +20,8 @@ assert.deepEqual(Array.from(m.tail([1,2,3],[4,5,6,7],3)),[5,6,7]);checks++;
 assert.deepEqual(Array.from(m.tail([1,2,3],[4],3)),[2,3,4]);checks++;
 assert.deepEqual(Array.from(m.zoomRange(0,100,0.5,0.25)),[12.5,62.5]);checks++;
 assert.deepEqual(Array.from(m.zoomRange(0,100,2,0.75)),[-75,125]);checks++;
+for (const [span, ticks, step] of [[24, 4, 5], [23.9982, 4, 5], [10, 5, 2], [1, 5, 0.2], [60, 6, 10], [0.003, 5, 0.0005]]) {
+ assert.ok(Math.abs(m.niceStep(span, ticks) - step) < step * 1e-9, `niceStep(${span}, ${ticks})`); checks++;
+}
+assert.equal(m.niceStep(0, 5), 1); assert.equal(m.niceStep(NaN, 5), 1); assert.equal(m.niceStep(-3, 5), 1); checks++;
 console.log(`${checks} chart-math checks passed`);

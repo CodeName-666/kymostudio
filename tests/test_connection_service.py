@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """Lifecycle tests use an injected in-memory transport, not a simulated Qt GUI."""
 import pytest
 from Backend.connection_service import ConnectionService

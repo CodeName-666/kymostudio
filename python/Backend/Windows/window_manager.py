@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """Floating Window Manager - Manages all floating chart windows."""
 
 from typing import Dict, List, Optional

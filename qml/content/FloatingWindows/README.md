@@ -98,7 +98,7 @@ Die WindowManagerBridge wurde als Context Property "WindowManager" registriert:
 # main.py
 from Backend.Windows.window_manager_bridge import WindowManagerBridge
 window_manager = WindowManagerBridge()
-kymo.set_window_manager(window_manager)
+studio.set_window_manager(window_manager)
 
 # studio.py
 def set_window_manager(self, window_manager: WindowManagerBridge):

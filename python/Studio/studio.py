@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """Own application/engine lifetime and explicit QML context dependencies."""
 import os
 from pathlib import Path

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """Strict, bounded parsing of the existing JSON, numeric and binary formats.
 
 No Qt, logging or UI callbacks live here. Callers decide how to report a

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """XY Chart - 2D Line and Scatter chart implementations."""
 
 from typing import Dict, Any

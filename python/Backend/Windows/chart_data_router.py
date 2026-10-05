@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KymoStudio-Commercial
+# Copyright (c) 2026 Christof Seidel
 """Chart Data Router - Routes data points to appropriate floating windows."""
 
 from typing import Dict, Optional, List, Tuple
