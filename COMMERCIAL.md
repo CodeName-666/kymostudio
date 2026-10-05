@@ -1,50 +1,54 @@
-# Lizenzierung von KymoStudio
+# Licensing KymoStudio
+
+**English** · [Deutsch](COMMERCIAL.de.md)
 
 Copyright (c) 2026 Christof Seidel
 
-KymoStudio wird **doppelt lizenziert**. Du wählst eine der beiden Lizenzen:
+KymoStudio is **dual-licensed**. You choose one of the two licenses:
 
-1. **GNU General Public License v3.0** ([LICENSE](LICENSE)): kostenlos.
-2. **Kommerzielle Lizenz**: kostenpflichtig, für Unternehmen.
+1. **GNU General Public License v3.0** ([LICENSE](LICENSE)): free of charge.
+2. **Commercial license**: paid, for companies.
 
-SPDX-Kennung: `GPL-3.0-only OR LicenseRef-KymoStudio-Commercial`
+SPDX identifier: `GPL-3.0-only OR LicenseRef-KymoStudio-Commercial`
 
-## Welche Lizenz brauche ich?
+## Which license do I need?
 
-| Einsatz | Lizenz |
+| Use | License |
 |---|---|
-| Hobby, Basteln, Lernen, Schule, Studium, private Projekte | GPLv3, kostenlos |
-| Eigenes Open-Source-Projekt unter GPLv3 | GPLv3, kostenlos |
-| Geänderte Version von KymoStudio wird **weitergegeben**, ohne den Quellcode unter der GPLv3 offenzulegen | **kommerzielle Lizenz erforderlich** |
-| Einbau von KymoStudio oder Teilen davon in ein proprietäres Produkt | **kommerzielle Lizenz erforderlich** |
-| Beruflicher, produktiver Einsatz im Unternehmen (Labor, Prüfstand, Entwicklung) | kommerzielle Lizenz erbeten (siehe unten) |
+| Hobby, tinkering, learning, school, university, private projects | GPLv3, free of charge |
+| Your own open-source project under GPLv3 | GPLv3, free of charge |
+| A modified version of KymoStudio is **distributed** without disclosing the source code under GPLv3 | **commercial license required** |
+| KymoStudio or parts of it are built into a proprietary product | **commercial license required** |
+| Professional, productive use in a company (lab, test bench, development) | commercial license requested (see below) |
 
-Rein interne Nutzung ohne Weitergabe erlaubt die GPLv3 auch Unternehmen. Wer
-KymoStudio beruflich produktiv einsetzt, wird trotzdem gebeten, eine
-kommerzielle Lizenz zu erwerben. Sie finanziert die Weiterentwicklung. Auf
-Wunsch umfasst sie auch Unterstützung und eine Rechnung für die Buchhaltung.
+The GPLv3 also allows companies purely internal use without distribution.
+Anyone using KymoStudio professionally and productively is nevertheless asked
+to purchase a commercial license. It funds further development. On request it
+also includes support and an invoice for accounting.
 
-## Wichtig: Qt-Module
+## Important: Qt modules
 
-KymoStudio nutzt **Qt Charts** und **Qt Quick 3D**. Diese Qt-Module stehen
-ausschließlich unter der **GPLv3** oder einer **kommerziellen Lizenz der Qt
-Company**. Eine kommerzielle KymoStudio-Lizenz umfasst den Code von
-KymoStudio. Wer KymoStudio in einem proprietären Produkt weitergeben will,
-braucht für diese beiden Qt-Module zusätzlich eine kommerzielle Qt-Lizenz.
-Ausgenommen ist eine künftige Version, die ohne sie auskommt. Die übrigen
-Abhängigkeiten haben andere Lizenzen:
+KymoStudio uses **Qt Charts** and **Qt Quick 3D**. These Qt modules are
+available exclusively under the **GPLv3** or a **commercial license from The
+Qt Company**. A commercial KymoStudio license covers the KymoStudio code.
+Anyone who wants to distribute KymoStudio in a proprietary product also needs
+a commercial Qt license for these two modules. The exception is a future
+version that no longer depends on them. The other dependencies have different
+licenses:
 
-| Abhängigkeit | Lizenz |
+| Dependency | License |
 |---|---|
 | PySide6 (Qt Core, Gui, Qml, Quick, Widgets) | LGPLv3 |
 | pyserial | BSD-3-Clause |
 | python-can | LGPLv3 |
-| paho-mqtt | EPL-2.0 oder EDL-1.0 |
+| paho-mqtt | EPL-2.0 or EDL-1.0 |
 
-## Kommerzielle Lizenz anfragen
+## Requesting a commercial license
 
-Lege im Repository ein Issue mit dem Titel **„Kommerzielle Lizenz“** an:
+Open an issue titled **"Commercial license"** in the repository:
 <https://github.com/CodeName-666/kymostudio/issues>
 
-Hilfreiche Angaben sind Firma, Einsatzzweck und die Anzahl der Arbeitsplätze.
-Bedingungen und Preise werden individuell vereinbart.
+Helpful details are the company, the intended use and the number of
+workstations. Terms and prices are agreed individually.
+
+If the English and German versions differ, the German version prevails.
