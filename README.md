@@ -1,174 +1,122 @@
-# KymoStudio · überarbeitete Desktop-Arbeitsfläche
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/kymotrace-logo-dark.svg">
+    <img src="docs/brand/kymotrace-logo-light.svg" alt="Kymotrace – Embedded Telemetry" width="520">
+  </picture>
+</p>
 
-**Quellcode-Ausgabe vom 27.09.2026 · PySide6 / Qt Quick (QML).**
-Diese Version basiert auf dem hochgeladenen Projekt. Datenkern, aktive Arbeitsfläche,
-Diagrammaktualisierung, Verbindungsverwaltung und Speicherung wurden überarbeitet.
-Sie ist keine Web-App und kein fertiges Windows-Installationspaket.
+<h3 align="center">KymoStudio · Live-Messdaten sehen, verstehen und auswerten</h3>
 
-> **Prüfstatus:** Die in dieser Bearbeitungsumgebung ausführbaren Python- und
-> JavaScript-Prüfungen sind dokumentiert in [TESTBERICHT.md](docs/TESTBERICHT.md).
-> PySide6 und die Transportbibliotheken konnten hier nicht installiert werden.
-> Deshalb sind die neue Qt-Oberfläche, native Diagrammaufrufe und reale Geräte
-> **noch nicht laufzeitverifiziert**. Ein echter Qt-Smoke-Test ist mitgeliefert.
+<p align="center">
+  Die Desktop-Arbeitsfläche für Messwerte aus Mikrocontrollern, Sensoren und Netzwerken.
+</p>
 
-## Start unter Windows
+<p align="center">
+  <img alt="Lizenz GPLv3 oder kommerziell" src="https://img.shields.io/badge/Lizenz-GPLv3%20%7C%20kommerziell-15123A">
+  <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-A78BFA">
+  <img alt="Qt 6.8 mit PySide6" src="https://img.shields.io/badge/Qt%206.8-PySide6-7C5CFF">
+  <img alt="Windows, Linux, macOS" src="https://img.shields.io/badge/Windows%20%C2%B7%20Linux%20%C2%B7%20macOS-FDE047">
+</p>
 
-Empfohlen ist eine separate Installation mit **Python 3.12**. Das Projekt nicht
-blind in die bisherige Installation kopieren; zunächst in einem neuen Ordner testen.
-Im entpackten Projektordner in PowerShell oder CMD:
+<p align="center">
+  <img src="docs/screenshots/kymostudio-workbench.png" alt="KymoStudio mit drei Signalen im Zeitverlauf und zwei XY-Bahnen" width="960">
+</p>
 
-```powershell
-py -3.12 -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements.txt
-.venv\Scripts\python.exe run.py --demo
+---
+
+## Worum geht es?
+
+Wer mit Mikrocontrollern, Sensoren oder Regelungen arbeitet, kennt das: Die
+interessanten Werte stecken im Gerät, und um sie zu sehen, bleiben nur
+`Serial.print`, ein einfacher Plotter mit einer einzigen Kurve oder das
+mühsame Auswerten von Logdateien.
+
+**KymoStudio** holt diese Daten live auf den Bildschirm, und zwar richtig:
+- mehrere Quellen gleichzeitig
+- beliebig viele Signale auf mehreren Diagrammen
+- echte XY- und 3D-Darstellungen statt nur Kurven über der Zeit
+- Analyse und Export, ohne die Aufzeichnung zu unterbrechen
+
+Das Ziel ist ein Werkzeug, das sich anfühlt wie ein gutes Messgerät:
+**präzise, ruhig und ehrlich**. Die Oberfläche zeigt jederzeit, ob Daten
+ankommen, ob etwas verloren geht und was gerade dargestellt wird. Dekorative
+Effekte gibt es nicht. Im Mittelpunkt steht die Messaufgabe.
+
+## Was KymoStudio kann
+
+| | |
+|---|---|
+| **Viele Quellen gleichzeitig** | Seriell (UART/USB), TCP, MQTT, CAN und ein eingebauter Testgenerator. Jede Quelle lässt sich einzeln starten und stoppen. |
+| **Versteht deine Daten** | Das kompakte Kymotrace-Binärprotokoll, einfache Zahlen als Text oder JSON. Das Format wird automatisch erkannt. |
+| **Vier Diagrammtypen** | Zeitverlauf Y(t), XY-Linie, XY-Punkte und XYZ in 3D. X und Y kommen dabei direkt aus dem Datenpaket. |
+| **Flexible Arbeitsfläche** | Diagramme kacheln, eines in den Fokus holen oder frei anordnen. Signale per Drag & Drop zuordnen. |
+| **Genau hinsehen** | Mausrad-Zoom, Verschieben, Einpassen per Doppelklick und Fadenkreuz mit Wertanzeige. Achsen lassen sich auch manuell festlegen. |
+| **Analyse** | Anzahl, Minimum, Maximum, Mittelwert, Effektivwert (RMS) und Standardabweichung, berechnet aus den Rohdaten, nicht aus der Anzeige. |
+| **Export** | Rohdaten als CSV, die Arbeitsfläche als PNG, die Konfiguration als JSON. |
+| **Pausieren ohne Datenverlust** | Die Anzeige anhalten, während die Erfassung im Hintergrund weiterläuft. |
+| **Transparent unter Last** | Begrenzte Puffer, Zähler für verworfene Werte und eine Statusleiste, die zeigt, was wirklich passiert. |
+
+<p align="center">
+  <img src="docs/screenshots/kymostudio-xy.png" alt="XY-Diagramm mit Kreis und Lissajous-Figur in KymoStudio" width="960">
+  <br><sub>Echte XY-Bahnen: Kennlinien, Trajektorien oder Lissajous-Figuren direkt aus dem Datenstrom.</sub>
+</p>
+
+## Wofür man es einsetzt
+
+- **Regelungstechnik:** Soll-, Ist- und Stellgröße eines PID-Reglers nebeneinander sehen und Parameter live einstellen.
+- **Sensorentwicklung:** Rauschen, Drift und Sprungantwort sichtbar machen und mit Statistik belegen.
+- **Antriebe und Leistungselektronik:** Strom, Spannung, Drehzahl und Position parallel verfolgen.
+- **Robotik und Bewegung:** Bahnen und Positionen als XY- oder 3D-Darstellung statt als Zahlenreihen.
+- **Prüfstand und Fahrzeug:** Signale aus CAN-Bus und MQTT gemeinsam mit seriellen Quellen auswerten.
+- **Lehre, Studium und Maker-Projekte:** Physik und Elektronik anschaulich machen. Der Testgenerator funktioniert auch ganz ohne Hardware.
+
+## Das Kymotrace-Ökosystem
+
+```mermaid
+flowchart LR
+    S["Sensoren und Regler<br/>im Mikrocontroller"] --> C["KymoCore<br/>Library"]
+    C --> T{{"UART · USB · TCP<br/>MQTT · CAN"}}
+    T --> K["KymoStudio<br/>Desktop-App"]
+    K --> A["Diagramme · Analyse<br/>CSV · PNG"]
 ```
 
-Danach startet `start_windows.bat` die Anwendung, oder:
+| Projekt | Rolle |
+|---|---|
+| **[KymoStudio](https://github.com/CodeName-666/kymostudio)** | dieses Repository: empfangen, darstellen, analysieren, exportieren |
+| [KymoCore](https://github.com/CodeName-666/kymocore) | portable C++11-Library, die Messwerte im Mikrocontroller erfasst und sendet |
+| [KymoProbe](https://github.com/CodeName-666/kymoprobe) | fertige Firmware und Beispiele für ESP32, Arduino und STM32 |
 
-```powershell
-.venv\Scripts\python.exe run.py
-```
+KymoStudio funktioniert auch ohne KymoCore. Jede Quelle, die Zahlen als Text
+oder JSON sendet, lässt sich direkt anzeigen.
 
-Die drei Demo-Signale benötigen keine angeschlossene Hardware. Reale Verbindungen
-werden nicht automatisch gestartet. Ihre Einstellungen werden im Dialog
-**Verbindungen** verwaltet; die Oberfläche unterscheidet „verbunden“ und „Verbindung wird aufgebaut“.
+## Schnell ausprobieren
 
-## Start unter Linux/macOS
+Mit Python 3.12. Die Demo braucht keine Hardware:
 
 ```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python run.py --demo
+python -m venv .venv
+.venv/Scripts/python -m pip install -r requirements.txt     # Linux/macOS: .venv/bin/python
+.venv/Scripts/python run.py --demo
 ```
 
-Für den normalen Betrieb ist eine Desktop-/Grafikumgebung erforderlich.
-Geräteberechtigungen und CAN-Treiber hängen von Betriebssystem und Adapter ab.
-Die Original-Anbindung heißt „Telnet“, verwendet aber den vorhandenen TCP-Datenstrom;
-es wurde keine neue Telnet-Terminalemulation hinzugefügt.
+Unter Windows startet danach auch `start_windows.bat` die Anwendung.
+Installation, Bedienung, Tastenkürzel, Grenzen und Konfiguration beschreibt das
+**[Handbuch](docs/HANDBUCH.md)**.
 
-## Neue Arbeitsweise
+## Dokumentation
 
-| Bereich | Bedienung |
-|---|---|
-| Arbeitsfläche | Diagramme im Mittelpunkt; schwebend, gekachelt oder einzeln fokussiert. |
-| Seitenleiste | **Diagramme**, **Signale**, **Analyse** statt einer überladenen Gesamtansicht. Breite verstellbar, ausblendbar. |
-| Signale | Suchfeld; Signal auswählen und einem oder mehreren Diagrammen zuordnen. Y(t) und X(t) getrennt. |
-| Diagramme | Zeitreihe, XY-Linie, XY-Streuung und bestehende XYZ-Streuung. Kurven ein-/ausblenden; Namen und Farben ändern. |
-| 2D-Navigation | Mausrad zum Zoomen, Ziehen zum Verschieben, Doppelklick zum Einpassen; optionales Koordinaten-Fadenkreuz. |
-| Achsen | Diagrammoptionen für manuelle X-/Y-Grenzen und Zeitfenster. Konstante Signale erhalten einen sichtbaren Wertebereich. |
-| Einstellungen | Gitternetz, Legende, Kantenglättung, Fadenkreuz, Aktualisierungsintervall, Kurvenlimit und optionale Verdichtung. |
-| Analyse | Anzahl, Minimum, Maximum, Mittelwert, Effektivwert (RMS), Standardabweichung und letzter **Y-Wert** aus dem gespeicherten Rohdatenfenster. |
-| Export | Einzelnes Signal oder gesamter Rohpuffer als CSV; sichtbare Diagramm-Arbeitsfläche als PNG; Konfiguration als JSON. |
+- **[Handbuch](docs/HANDBUCH.md):** Installation, Bedienung, Datenintegrität, Konfiguration und Prüfungen
+- **[Architektur](docs/ARCHITEKTUR.md):** Aufbau von Python-Backend und QML-Oberfläche
+- **[Testbericht](docs/TESTBERICHT.md)** · **[Änderungen](CHANGELOG.md)** · **[Logo und Gestaltung](docs/brand/BRAND.md)** · **[Mitmachen](CONTRIBUTING.md)**
 
-**Anzeige pausieren stoppt nicht die Erfassung.** Die Puffer bleiben begrenzt; bei langer
-Pause können ältere Anzeige- und Rohwerte verloren gehen. Die Statusleiste zeigt die
-entsprechenden Zähler. Für einen echten Aufnahmestopp die Verbindung stoppen.
+## Lizenz
 
-### Tastatur
+Copyright (c) 2026 Christof Seidel. KymoStudio ist doppelt lizenziert:
 
-| Kürzel | Aktion |
-|---|---|
-| Ctrl+N | Diagramm erstellen |
-| Ctrl+E | Rohdaten-CSV exportieren |
-| Ctrl+Leertaste | Anzeige pausieren/fortsetzen |
-| Ctrl+B | Seitenleiste ein-/ausblenden |
-| Ctrl+, | Anzeigeeinstellungen |
-| Ctrl+S | Workspace speichern |
-| Ctrl+0 | Daten in allen Diagrammen einpassen |
+- **GPLv3** ([LICENSE](LICENSE)) ist kostenlos, etwa für Hobby, Basteln,
+  Lernen und Open-Source-Projekte.
+- Eine **kommerzielle Lizenz** braucht, wer KymoStudio in proprietären
+  Produkten weitergibt. Unternehmen werden gebeten, sie auch für den
+  produktiven Einsatz zu erwerben.
 
-## Datenintegrität und Grenzen
-
-Rohdaten werden **vor der Anzeigeverdichtung** gespeichert. Statistik und CSV greifen
-auf diesen Speicher zu, nicht auf die möglicherweise reduzierten Kurven.
-Fehlende X- oder Z-Koordinaten bleiben im CSV leer; Empfangszeit ist kein gemessener X-Wert.
-Der CSV-Export ist UTF-8 mit BOM, Komma als Feldtrenner und Punkt als Dezimalzeichen.
-In Tabellenprogrammen gegebenenfalls den CSV-Import mit diesen Einstellungen verwenden.
-
-| Grenze | Wert / Bedeutung |
-|---|---|
-| Signal-IDs im Datenpaket | Echte ganze Zahlen von 0 bis 255; keine booleschen Werte. |
-| Eingabepaket | Maximal 64 KiB; ungültige und nicht-endliche Werte werden abgewiesen. |
-| Eingangswarteschlange | Pro Verbindung höchstens 2.048 Pakete / 4 MiB; bei Überlast ältere Pakete entfernen. |
-| Rohdaten | Höchstens 20.000 Werte je Signal und 250.000 insgesamt. |
-| Anzeige-Zwischenpuffer | Höchstens 4.096 Punkte je Signal und Dimension. Weitere begrenzte Puffer gibt es in QML. |
-| 2D-Kurven | Einstellbar 500–50.000 Punkte, Standard 10.000. |
-| Quellen / Signale / Fenster | Maximal 128 gespeicherte Verbindungen, 256 Signale, 16 Diagramme; 64 Kurven je Diagramm. |
-| 3D | Bestehender Quick3D-Renderer mit maximal 5.000 Punktobjekten je Serie; kein neu implementierter instanzierter GPU-Renderer. |
-
-Das Aktualisierungsintervall ist eine **Ziel-Taktung, keine zugesicherte Bildrate**.
-Sehr viele Kurven, 3D-Punkte, Quellen oder hohe Datenraten können weiterhin hohe Last
-erzeugen. Diese Ausgabe ist **kein verlustfreier Langzeitrekorder**.
-Der CSV-Export enthält nur die zum Exportstart noch gespeicherten Messwerte.
-Zähler für Rohdatenersatz, ungültige Pakete und Überlast sind getrennt dargestellt.
-Beim Verbindungsstopp kann die Oberfläche auf einen Worker bis zu 1,5 Sekunden warten;
-bei mehreren problematischen Verbindungen kann sich diese Zeit summieren.
-
-## Konfiguration und Migration
-
-`config/config.json` ist die mitgelieferte **Vorlage**, nicht mehr der normale
-Speicherort für laufende Benutzereinstellungen. Standardorte:
-
-- Windows: `%APPDATA%\KymoStudio\config.json`
-- Linux: `${XDG_CONFIG_HOME:-~/.config}/KymoStudio/config.json`
-- macOS: `~/Library/Application Support/KymoStudio/config.json`
-
-Ein vorhandenes Verzeichnis `PlotterApp` aus der Zeit vor der Umbenennung wird
-beim ersten Start einmalig nach `KymoStudio` verschoben.
-
-`KYMO_CONFIG_HOME` überschreibt das Benutzerdatenverzeichnis; der alte Name
-`PLOTTER_CONFIG_HOME` wird weiterhin gelesen. Mit
-`python run.py --config PFAD/config.json` lässt sich eine explizite schreibbare
-Konfiguration wählen. Eine vorhandene Datei wird vor der Nutzung validiert.
-Geometrie und einfache Darstellungspräferenzen liegen zusätzlich in Qt `Settings`.
-
-Vorhandene JSON-Konfiguration zuerst sichern, dann in der neuen Oberfläche importieren.
-Ein erfolgreicher Import stoppt vorhandene Verbindungen, leert Rohdaten und ersetzt
-Verbindungsdefinitionen sowie den Workspace. Importierte Verbindungen bleiben gestoppt.
-Bei einem Schreibfehler nach dem Stoppen können die alten Verbindungen bereits
-angehalten sein; sie werden nicht stillschweigend wieder gestartet.
-
-Gespeichert werden Diagrammdefinitionen, Zuordnungen, Namen, Farben, Sichtbarkeit und
-2D-Achsenzustände. **Messwerte werden nicht im Workspace gespeichert.** Die Einstellung
-„Anzeige pausiert“ und 3D-Kamerapositionen werden nicht als vollständige Sitzung gespeichert.
-
-JSON kann MQTT-Zugangsdaten im Klartext enthalten. Konfigurationen und Protokolle nicht
-ungeprüft veröffentlichen. Es wurde kein Betriebssystem-Schlüsselspeicher ergänzt.
-Das Log rotiert im Benutzerdatenverzeichnis unter `logs/kymostudio.log`.
-
-## Prüfungen auf dem Zielrechner
-
-```powershell
-.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.venv\Scripts\python.exe -m pytest -q
-.venv\Scripts\python.exe run.py --smoke-test
-```
-
-Der Smoke-Test verwendet ein temporäres Profil, öffnet die QML-Anwendung, startet die
-Demo und prüft Dateneingang sowie erkannte QML-Fehler. Er ersetzt keine visuelle Abnahme.
-Unter Windows anschließend `--demo` normal starten und die
-[Abnahmecheckliste](docs/TESTBERICHT.md#manuelle-abnahme-auf-dem-zielrechner) durchgehen.
-
-Zusätzliche Prüfungen (Node.js nur für Entwicklungstests, nicht für die App nötig):
-
-```bash
-node tests/js/chart_math.test.cjs
-node tools/check_qml_scripts.cjs
-python tools/check_backend_contracts.py
-python tools/benchmark_core.py
-```
-
-Ein GitHub-Actions-Workflow ist enthalten, wurde in dieser Bearbeitung aber nicht auf
-GitHub ausgeführt. Drei Tests benötigen das separate, nicht mitgelieferte
-`KymoProbe`-Projekt; ohne dieses werden sie nachvollziehbar übersprungen.
-
-## Projektunterlagen
-
-[Änderungen](CHANGELOG.md) · [Architektur](docs/ARCHITEKTUR.md) ·
-[Testbericht](docs/TESTBERICHT.md) · [offene Abnahmepunkte](docs/TESTBERICHT.md#manuelle-abnahme-auf-dem-zielrechner)
-
-Historische Planungs-/Phasendokumente liegen unter `docs/legacy/` und sind keine
-aktuellen Freigabenachweise. Alte, nicht mehr von der Hauptansicht verwendete
-QML-Komponenten bleiben aus Kompatibilitätsgründen im Quellbaum. Es wurde weder
-jede Altkomponente neu geschrieben noch jede Funktion unter Qt ausgeführt.
-Bestehende Copyright- und Lizenzhinweise wurden beibehalten; diese Ausgabe erklärt
-keine zusätzlichen Rechte an ursprünglichen oder externen Komponenten.
+Details, auch zu den Qt-Modulen, stehen in [COMMERCIAL.md](COMMERCIAL.md).
