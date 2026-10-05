@@ -561,7 +561,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 ### Problem: WindowManager nicht verfügbar in QML
 **Lösung:**
 - Prüfe `studio.py:41`: `setContextProperty("WindowManager", window_manager)`
-- Prüfe `main.py:72`: `kymo.set_window_manager(window_manager)`
+- Prüfe `main.py:72`: `studio.set_window_manager(window_manager)`
 - Console-Log in QML: `console.log(typeof WindowManager)`
 
 ### Problem: chartRenderer ist null
