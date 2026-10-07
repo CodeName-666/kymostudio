@@ -20,7 +20,7 @@
   <img alt="License GPLv3 or commercial" src="https://img.shields.io/badge/License-GPLv3%20%7C%20commercial-15123A">
   <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-A78BFA">
   <img alt="Qt 6.8 with PySide6" src="https://img.shields.io/badge/Qt%206.8-PySide6-7C5CFF">
-  <img alt="Windows, Linux, macOS" src="https://img.shields.io/badge/Windows%20%C2%B7%20Linux%20%C2%B7%20macOS-FDE047">
+  <img alt="Windows installer, Linux and macOS from source" src="https://img.shields.io/badge/Windows%20installer%20%C2%B7%20Linux%2FmacOS%20from%20source-FDE047">
 </p>
 
 <p align="center">
@@ -58,7 +58,7 @@ effects. The measurement task comes first.
 | **Look closely** | Mouse-wheel zoom, panning, fit with a double click and a crosshair with value readout. Axes can also be set manually. |
 | **Analysis** | Count, minimum, maximum, mean, root mean square (RMS) and standard deviation, computed from the raw data, not from the display. |
 | **Export** | Raw data as CSV, the workspace as PNG, the configuration as JSON. |
-| **Pause without losing data** | Freeze the display while acquisition keeps running in the background. |
+| **Pause the display, keep recording** | Freeze the display while acquisition keeps running in the background. Buffers are bounded: during a long pause the oldest values are dropped, and the status bar counts them. |
 | **Transparent under load** | Bounded buffers, counters for dropped values and a status bar that shows what is really happening. |
 
 <p align="center">
