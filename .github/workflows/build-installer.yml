@@ -2,7 +2,8 @@ name: Build Installer
 
 # Builds KymoStudio with PyInstaller, packs it into an Inno Setup installer and
 # publishes it as a GitHub Release.
-# - Runs on push to master (via pull request from develop) or manually.
+# - Runs on push to master (via pull request from develop) or manually;
+#   documentation-only pushes are ignored.
 # - The version comes from python/Core/version.py; the tag is v<version>.
 # - Build and release only run after the test suite is green.
 # - The bundled exe must pass --smoke-test before anything is published.
@@ -10,6 +11,12 @@ name: Build Installer
 on:
   push:
     branches: [master]
+    # Documentation-only changes must not try to publish a release
+    # (the version is unchanged, so the publish guard would fail).
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/**'
   workflow_dispatch:
 
 concurrency:
