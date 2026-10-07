@@ -20,7 +20,7 @@
   <img alt="Lizenz GPLv3 oder kommerziell" src="https://img.shields.io/badge/Lizenz-GPLv3%20%7C%20kommerziell-15123A">
   <img alt="Python 3.12" src="https://img.shields.io/badge/Python-3.12-A78BFA">
   <img alt="Qt 6.8 mit PySide6" src="https://img.shields.io/badge/Qt%206.8-PySide6-7C5CFF">
-  <img alt="Windows, Linux, macOS" src="https://img.shields.io/badge/Windows%20%C2%B7%20Linux%20%C2%B7%20macOS-FDE047">
+  <img alt="Windows-Installer, Linux und macOS aus dem Quellcode" src="https://img.shields.io/badge/Windows--Installer%20%C2%B7%20Linux%2FmacOS%20aus%20Quellcode-FDE047">
 </p>
 
 <p align="center">
@@ -58,7 +58,7 @@ Effekte gibt es nicht. Im Mittelpunkt steht die Messaufgabe.
 | **Genau hinsehen** | Mausrad-Zoom, Verschieben, Einpassen per Doppelklick und Fadenkreuz mit Wertanzeige. Achsen lassen sich auch manuell festlegen. |
 | **Analyse** | Anzahl, Minimum, Maximum, Mittelwert, Effektivwert (RMS) und Standardabweichung, berechnet aus den Rohdaten, nicht aus der Anzeige. |
 | **Export** | Rohdaten als CSV, die Arbeitsfläche als PNG, die Konfiguration als JSON. |
-| **Pausieren ohne Datenverlust** | Die Anzeige anhalten, während die Erfassung im Hintergrund weiterläuft. |
+| **Anzeige anhalten, Erfassung läuft weiter** | Die Anzeige anhalten, während die Erfassung im Hintergrund weiterläuft. Die Puffer sind begrenzt: Bei langer Pause fallen die ältesten Werte weg, die Statusleiste zählt sie. |
 | **Transparent unter Last** | Begrenzte Puffer, Zähler für verworfene Werte und eine Statusleiste, die zeigt, was wirklich passiert. |
 
 <p align="center">
